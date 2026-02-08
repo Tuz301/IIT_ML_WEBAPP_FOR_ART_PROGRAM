@@ -1,0 +1,158 @@
+{
+  "name": "NG TB/HIV Guidelines AI Agent",
+  "type": "scenario",
+  "modules": [
+    {
+      "id": "gform_trigger",
+      "type": "trigger",
+      "name": "New Submission",
+      "app": "googleForms",
+      "auth": null,
+      "parent": null,
+      "operation": {
+        "name": "New Submission",
+        "operationId": "getFormResponses",
+        "input": {
+          "formId": "1FAIpQLSfGAbCdEwXyWJmz9L9Zq9pL7bKvJqN1oR3tYyUzA"
+        },
+        "metadata": {
+          "out": {
+            "responses": [
+              {
+                "questionId": "email",
+                "questionName": "Email Address",
+                "answer": "{{5.answer}}"
+              },
+              {
+                "questionId": "question",
+                "questionName": "User Question",
+                "answer": "{{1.answer}}"
+              }
+            ],
+            "formId": "{{form.id}}",
+            "respondentEmail": "{{respondentEmail}}",
+            "responseId": "{{id}}",
+            "responseTimestamp": "{{createTime}}"
+          }
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "set_vars_guidelines_context",
+      "type": "action",
+      "name": "Set TB/HIV Guidelines Context",
+      "app": "setMultipleVariables",
+      "auth": null,
+      "parent": "gform_trigger",
+      "operation": {
+        "name": "Set Multiple Variables",
+        "operationId": "setMultipleVariables",
+        "input": {
+          "variables": [
+            {
+              "name": "context_intro_diagnosis",
+              "value": "NIGERIAN NATIONAL GUIDELINES FOR HIV PREVENTION, TREATMENT AND CARE (2021 EDITION) - KEY EXCERPTS\\n\\n**CHAPTER 3: Management of TB/HIV Co-infection in Adults**\\n\\n**3.2.1 Screening of PLHIV for TB:** All PLHIV should be asked for the following at every visit: Current cough, fever, weight loss, night sweats. Those with any symptom have presumptive TB.\\n\\n**3.2.2 Diagnosis of Pulmonary TB (PTB):** Xpert MTB/RIF assay is the first-line test for all presumptive TB cases. AFB smear microscopy is NOT recommended. For PLHIV with Advanced HIV Disease (AHD), Urine LF-LAM is also recommended.\\n\\n**3.2.5 Treatment of TB among adult PLHIV:**\\n- **Regimen 1 (6 months):** 2(RHZE)/4(RH) for all PTB and EPTB except TB meningitis and osteo-articular TB.\\n- **Regimen 2 (12 months):** 2(RHZE)/10(RH) for TB meningitis and osteo-articular TB.\\n- See Tables 3 and 4 for weight-based dosing.\\n- Pyridoxine (Vitamin B6) 50mg daily is recommended for all.\\n\\n**3.3.3 ART in TB/HIV Co-infection:** ART should be started in all TB patients living with HIV, regardless of CD4+ cell count. TB treatment should be initiated first, followed by ART as soon as possible within the first 2 weeks.\\n- **Preferred 1st-line ART:** TDF + 3TC (or FTC) + DTG.\\n- See Table 5 for all recommended regimens.\\n\\n**CHAPTER 5: Tuberculosis Preventive Treatment (TPT) in PLHIV**\\n\\n**5.2 Screening PLHIV for TPT:** All PLHIV must be screened for TB symptoms at every encounter to rule out active TB before starting TPT.\\n\\n**5.4 TPT Regimens:**\\n- 6H (6 months of daily Isoniazid)\\n- 3HP (3 months of weekly Rifapentine + Isoniazid)\\n- 3HR (3 months of daily Isoniazid + Rifampicin)\\n- 1HP (1 month of daily Rifapentine + Isoniazid)\\n- See Tables 20-24 for detailed dosing instructions for adults and children.\\n\\n**CHAPTER 4: Management in Children and Adolescents**\\n\\nPrinciples are similar to adults. Use child-friendly fixed-dose combinations. See Tables 10, 11, 14, and 15 for specific medicine dosing for TB treatment and ART based on weight bands.\\n\\n**CRITICAL RULE: Always consult the full guidelines for comprehensive information. This is a summary for reference only.**"
+            },
+            {
+              "name": "context_treatment_drugs",
+              "value": "**DRUG INTERACTIONS & KEY ALERTS**\\n\\n**3.4.2 ARV and anti-TB drug interaction:**\\n- **Rifampicin** decreases levels of PIs, EFV, NVP, and DTG.\\n- **Action:** When using Rifampicin with DTG, double the DTG dose to 50mg twice daily.\\n- **Rifabutin** is preferred over Rifampicin for patients on PI-based ART (e.g., LPV/r). The dose of Rifabutin must be reduced to 150mg daily when co-administered with a PI.\\n- **Bedaquiline** and **Efavirenz** should NOT be used together.\\n- Refer to Table 9 and Annex 2 for detailed interactions and management.\\n\\n**3.4.3 Overlapping side effects:**\\n- Skin rashes: Nevirapine/Efavirenz + Pyrazinamide/Isoniazid/Rifampicin.\\n- Peripheral neuropathy: NRTIs (e.g., Stavudine) + Isoniazid.\\n- Hepatitis: Many ARVs and anti-TB drugs.\\n\\n**3.4.4 Immune Reconstitution Inflammatory Syndrome (IRIS):**\\n- Occurs within 4-8 weeks of ART initiation.\\n- Manifests as worsening TB symptoms (fever, lymphadenopathy, radiological worsening).\\n- **Management:** Continue ART and anti-TB treatment. Use corticosteroids (e.g., Prednisolone) for severe cases. Rule out other OIs and treatment failure.\\n\\n**TPT CONTRAINDICATIONS:**\\n- Active TB disease.\\n- Known prior adverse events or hypersensitivity to regimen drugs.\\n- Known pre-existing liver damage.\\n- 3HP is not recommended for children under 2 years or patients on PI/NVP-based ART.\\n\\n**SAFETY MONITORING:**\\n- Monitor for jaundice, abdominal pain, nausea, vomiting, skin rashes, and peripheral neuropathy during TB treatment and TPT.\\n- Stop treatment and refer to a medical officer if severe adverse effects occur."
+            }
+          ]
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 240
+      }
+    },
+    {
+      "id": "http_call_deepseek",
+      "type": "action",
+      "name": "Ask Deepseek (API Call)",
+      "app": "http",
+      "auth": null,
+      "parent": "set_vars_guidelines_context",
+      "operation": {
+        "name": "Make an API Call",
+        "operationId": "restApiCall",
+        "input": {
+          "url": "https://api.deepseek.com/v1/chat/completions",
+          "method": "POST",
+          "headers": "{\"Content-Type\":\"application/json\",\"Authorization\":\"Bearer sk-3b162ca33d2e4529ac4b288162761eda\"}",
+          "body": "{\n  \"model\": \"deepseek-chat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a specialized AI assistant for Nigerian healthcare professionals, providing information based **exclusively** on the provided excerpts from the '2021 Nigerian National Guidelines for Management of TB/HIV Co-Infection'. Your purpose is to offer precise, actionable information from this document.\\n\\n**CRITICAL INSTRUCTIONS:**\\n1.  **Answer ONLY from the provided context.** Do not use any prior knowledge.\\n2.  **Be specific.** Cite section names, chapters, or page numbers (e.g., 'As stated in Chapter 3.2.5 on Treatment of TB among adult PLHIV...').\\n3.  **If the answer is not found** in the context, state: 'The guidelines do not contain specific information on this exact topic. Please consult the full document or a medical supervisor for guidance.'\\n4.  **Never provide medical advice, diagnoses, or interpret a specific patient's case.** You are a text-based reference tool.\\n5.  **For drug regimens, dosing, or algorithms,** always refer to the exact tables, figures, and instructions in the guidelines.\\n6.  **Maintain a professional, clear, and concise tone.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"GUIDELINES CONTEXT: {{{variables.context_intro_diagnosis}}}\\n\\n{{{variables.context_treatment_drugs}}}\\n\\n----------\\n\\nUSER'S QUESTION: \\\"{{{googleForms.1.answer}}}\\\"\\n\\nANSWER BASED SOLELY ON THE PROVIDED GUIDELINES:\"\n    }\n  ],\n  \"temperature\": 0.1,\n  \"max_tokens\": 2000\n}"
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 480
+      }
+    },
+    {
+      "id": "parse_json_response",
+      "type": "action",
+      "name": "Parse AI Response",
+      "app": "json",
+      "auth": null,
+      "parent": "http_call_deepseek",
+      "operation": {
+        "name": "Parse JSON",
+        "operationId": "parseJson",
+        "input": {
+          "data": "{{http_call_deepseek.body}}",
+          "schema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"choices\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"message\": {\n            \"type\": \"object\",\n            \"properties\": {\n              \"content\": {\n                \"type\": \"string\"\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}"
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 720
+      }
+    },
+    {
+      "id": "gsheets_log_qa",
+      "type": "action",
+      "name": "Log Q&A in Sheet",
+      "app": "googleSheets",
+      "auth": null,
+      "parent": "parse_json_response",
+      "operation": {
+        "name": "Add a Row",
+        "operationId": "addRow",
+        "input": {
+          "spreadsheetId": "",
+          "sheetId": 0,
+          "cellData": [
+            {
+              "columnName": "Timestamp",
+              "value": "{{gform_trigger.responseTimestamp}}"
+            },
+            {
+              "columnName": "Question",
+              "value": "{{gform_trigger.1.answer}}"
+            },
+            {
+              "columnName": "AI Answer",
+              "value": "{{parse_json_response.choices[0].message.content}}"
+            }
+          ]
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 960
+      }
+    }
+  ],
+  "tags": [
+    "AI",
+    "Healthcare",
+    "Nigeria",
+    "TB",
+    "HIV",
+    "Deepseek",
+    "Guidelines"
+  ]
+}

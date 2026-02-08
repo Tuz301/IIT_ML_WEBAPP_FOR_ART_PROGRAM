@@ -1,0 +1,54 @@
+{
+  "name": "IIT ML Service - Field Operations",
+  "short_name": "IIT Field Ops",
+  "description": "Mobile and field operations app for IIT ML Service with offline capabilities",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [],
+  "categories": ["health", "medical", "productivity"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "screenshots": [
+    {
+      "src": "/screenshot-640x1136.png",
+      "sizes": "640x1136",
+      "type": "image/png",
+      "label": "Dashboard"
+    },
+    {
+      "src": "/screenshot-640x1136.png",
+      "sizes": "640x1136",
+      "type": "image/png",
+      "label": "Patient List"
+    },
+    {
+      "src": "/screenshot-640x1136.png",
+      "sizes": "640x1136",
+      "type": "image/png",
+      "label": "Prediction Form"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "View Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open main dashboard",
+      "url": "/"
+    },
+    {
+      "name": "View Patients",
+      "short_name": "Patients",
+      "description": "View patient list",
+      "url": "/patients"
+    },
+    {
+      "name": "New Prediction",
+      "short_name": "Predict",
+      "description": "Create new prediction",
+      "url": "/predictions/new"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+Data Schema & Relationships
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       MESSAGE HEADER                            │
+├─────────────────────────────────────────────────────────────────┤
+│ • messageStatusCode: "SYNCED"                                   │
+│ • messageSource: "NMRS"                                         │
+│ • messageCreationDateTime: "2024-01-19 15:11:14"               │
+│ • facilityDatimCode: "gLfqoHRtXMC"                             │
+│ • facilityName: "fc Massan Clinic Limited"                     │
+│ • fileName, uploadDate, processedDate, etc.                    │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       MESSAGE DATA                              │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                ┌───────────────┼───────────────┐
+                ▼               ▼               ▼
+    ┌─────────────────────┐  ┌─────────────┐  ┌─────────────────┐
+    │    DEMOGRAPHICS     │  │    VISITS   │  │   ENCOUNTERS    │
+    ├─────────────────────┤  ├─────────────┤  ├─────────────────┤
+    │ • patientId: 16831  │  │ • visitId   │  │ • encounterId   │
+    │ • firstName (enc)   │  │ • patientId │  │ • encounterType │
+    │ • lastName (enc)    │  │ • dateStarted│  │ • patientId    │
+    │ • gender: "F"       │  │ • dateStopped│  │ • visitId      │
+    │ • birthdate: 1985   │  │ • visitUuid  │  │ • formId       │
+    │ • phoneNumber (enc) │  │ • locationId │  │ • pmmForm      │
+    │ • address (enc)     │  └─────────────┘  │ • encounterUuid │
+    │ • patientUuid       │         │         └─────────────────┘
+    └─────────────────────┘         │                  │
+          1                         ▼                  ▼
+          │              ┌─────────────────────┐  ┌─────────────┐
+          └─────────────►│    VISIT DETAILS    │  │    OBS      │
+                         ├─────────────────────┤  ├─────────────┤
+                         │ • Multiple visits   │  │ • obsUuid   │
+                         │   (17 total)        │  │ • encounterId│
+                         │ • From 2016 to 2023 │  │ • conceptId │
+                         │ • Regular follow-ups│  │ • variableName│
+                         └─────────────────────┘  │ • variableValue│
+                                                  │ • datatype    │
+                                                  └─────────────┘
+```
+
+Key Data Flow
+
+1. Patient Registration → Initial Visit → HIV Enrollment & ART Commencement
+2. Regular Follow-ups → Clinical Encounters → Observations/Lab Results
+3. Treatment Monitoring → Pharmacy Refills → Viral Load Testing
+
+Encounter Types & Forms
+
+```
+HIV Care Pathway:
+┌───────────────┬──────────────────────┬──────────────────────────┐
+│  Encounter    │       Form Type      │       Purpose            │
+├───────────────┼──────────────────────┼──────────────────────────┤
+│ HIV Enrollment│ Client intake form   │ Initial registration     │
+│ ART Commence  │ ART Commencement     │ Start treatment          │
+│ Care Card     │ Clinical assessment  │ Routine check-ups        │
+│ Pharmacy      │ Pharmacy Order       │ Medication dispensing    │
+│ Laboratory    │ Lab Order & Result   │ Tests (Viral Load, etc.) │
+│ Client Tracking│ Tracking & Termination│ Patient follow-up       │
+└───────────────┴──────────────────────┴──────────────────────────┘
+```
+
+Temporal Flow Example
+
+```
+2016-06-08: HIV Enrollment + ART Commencement
+2020-2021: Regular clinical visits (every 2-4 months)
+2021-2023: Viral Load monitoring + Routine care
+2023-12: Latest laboratory order + Client tracking
+```
+
+Key Relationships
+
+· One-to-Many: 1 Patient → Multiple Visits
+· One-to-Many: 1 Visit → Multiple Encounters
+· One-to-Many: 1 Encounter → Multiple Observations
+· Temporal Sequence: Visits ordered chronologically with increasing complexity of care

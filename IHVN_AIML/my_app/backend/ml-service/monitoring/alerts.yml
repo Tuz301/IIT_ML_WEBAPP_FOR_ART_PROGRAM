@@ -1,0 +1,222 @@
+groups:
+  - name: iit-ml-service-alerts
+    rules:
+      # Error Rate Alerts
+      - alert: HighErrorRate
+        expr: rate(iit_api_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: iit-ml-service
+        annotations:
+          summary: "High error rate detected ({{ $value }} errors/min)"
+          description: "Error rate is {{ $value }}%, which is above the 5% threshold"
+          runbook_url: "https://github.com/your-org/iit-ml-service/runbooks/high-error-rate"
+
+      - alert: MediumErrorRate
+        expr: rate(iit_api_errors_total[5m]) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "Elevated error rate detected ({{ $value }} errors/min)"
+          description: "Error rate is {{ $value }}%, which is above the 2% threshold"
+
+      # Latency Alerts
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, rate(iit_prediction_duration_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: critical
+          service: iit-ml-service
+        annotations:
+          summary: "P95 latency above 1 second ({{ $value }}s)"
+          description: "95th percentile prediction latency is {{ $value }}s, exceeding 1s threshold"
+          runbook_url: "https://github.com/your-org/iit-ml-service/runbooks/high-latency"
+
+      - alert: HighLatencyP50
+        expr: histogram_quantile(0.50, rate(iit_prediction_duration_seconds_bucket[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "P50 latency elevated ({{ $value }}s)"
+          description: "50th percentile prediction latency is {{ $value }}s, above 0.5s threshold"
+
+      # Model Performance Alerts
+      - alert: ModelDriftDetected
+        expr: iit_model_drift_detected == 1
+        for: 1m
+        labels:
+          severity: critical
+          service: iit-ml-service
+        annotations:
+          summary: "Model drift detected"
+          description: "Model performance has degraded significantly. Manual intervention required."
+          runbook_url: "https://github.com/your-org/iit-ml-service/runbooks/model-drift"
+
+      - alert: RetrainingNeeded
+        expr: iit_model_retraining_needed == 1
+        for: 5m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "Model retraining recommended"
+          description: "Model performance metrics indicate retraining may be beneficial"
+
+      # System Resource Alerts
+      - alert: HighMemoryUsage
+        expr: (iit_system_memory_usage_bytes / iit_system_memory_total_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          service: iit-ml-service
+        annotations:
+          summary: "High memory usage ({{ $value }}%)"
+          description: "Memory usage is above 90%. Risk of out-of-memory errors."
+          runbook_url: "https://github.com/your-org/iit-ml-service/runbooks/high-memory"
+
+      - alert: HighCPUUsage
+        expr: iit_system_cpu_usage_percent > 90
+        for: 5m
+        labels:
+          severity: critical
+          service: iit-ml-service
+        annotations:
+          summary: "High CPU usage ({{ $value }}%)"
+          description: "CPU usage is above 90%. System performance may be degraded."
+          runbook_url: "https://github.com/your-org/iit-ml-service/runbooks/high-cpu"
+
+      # Database Alerts
+      - alert: DatabaseConnectionPoolOverflow
+        expr: iit_db_connection_pool_overflow > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: iit-ml-service
+        annotations:
+          summary: "Database connection pool overflow ({{ $value }} connections)"
+          description: "Database connection pool has overflowed. Risk of connection failures."
+          runbook_url: "https://github.com/your-org/iit-ml-service/runbooks/db-connection-overflow"
+
+      - alert: HighDBQueryLatency
+        expr: histogram_quantile(0.95, rate(iit_db_query_duration_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "High database query latency ({{ $value }}s P95)"
+          description: "95th percentile database query latency is above 1 second"
+
+      # Cache Performance Alerts
+      - alert: LowCacheHitRate
+        expr: rate(iit_api_cache_misses_total[5m]) / (rate(iit_api_cache_hits_total[5m]) + rate(iit_api_cache_misses_total[5m])) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "Low API cache hit rate ({{ $value }}% misses)"
+          description: "API cache hit rate is below 20%. Consider cache optimization."
+
+      # Service Health Alerts
+      - alert: ServiceUnhealthy
+        expr: iit_service_health_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: iit-ml-service
+        annotations:
+          summary: "Service health check failed"
+          description: "Service health check has failed. Immediate investigation required."
+          runbook_url: "https://github.com/your-org/iit-ml-service/runbooks/service-unhealthy"
+
+      - alert: SlowServiceResponse
+        expr: iit_service_response_time_seconds > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "Slow service response time ({{ $value }}s)"
+          description: "Service response time is above 5 seconds"
+
+      # Feature Store Alerts
+      - alert: LowFeatureStoreCacheHitRate
+        expr: rate(iit_feature_store_cache_misses_total[5m]) / (rate(iit_feature_store_cache_hits_total[5m]) + rate(iit_feature_store_cache_misses_total[5m])) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "Low feature store cache hit rate"
+          description: "Feature store cache performance is degraded"
+
+      # Model Bias Alerts
+      - alert: HighModelBiasDetected
+        expr: iit_model_bias_score > 0.7
+        for: 5m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "High model bias detected ({{ $value }})"
+          description: "Model bias score is above acceptable threshold"
+
+      # Incident Management Alerts
+      - alert: MultipleActiveIncidents
+        expr: iit_active_incidents_total > 3
+        for: 5m
+        labels:
+          severity: critical
+          service: iit-ml-service
+        annotations:
+          summary: "Multiple active incidents ({{ $value }})"
+          description: "There are multiple active incidents requiring attention"
+
+      - alert: SlowIncidentResponse
+        expr: histogram_quantile(0.95, rate(iit_incident_response_time_seconds_bucket[1h])) > 1800
+        for: 10m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "Slow incident response times"
+          description: "95th percentile incident response time is above 30 minutes"
+
+  - name: iit-ml-service-business-metrics
+    rules:
+      # Business Impact Alerts
+      - alert: LowPredictionThroughput
+        expr: rate(iit_model_predictions_total[5m]) < 10
+        for: 10m
+        labels:
+          severity: warning
+          service: iit-ml-service
+        annotations:
+          summary: "Low prediction throughput ({{ $value }} predictions/min)"
+          description: "Prediction throughput has dropped below 10 predictions per minute"
+
+      - alert: HighBatchSizeVariation
+        expr: stddev(iit_batch_size_distribution_bucket) / avg(iit_batch_size_distribution_bucket) > 0.5
+        for: 15m
+        labels:
+          severity: info
+          service: iit-ml-service
+        annotations:
+          summary: "High batch size variation detected"
+          description: "Batch prediction sizes are highly variable, may indicate inconsistent usage patterns"
+
+      - alert: UnusualRiskDistribution
+        expr: abs(rate(iit_prediction_risk_distribution{quantile="0.5"}[10m]) - rate(iit_prediction_risk_distribution{quantile="0.5"}[1h])) / rate(iit_prediction_risk_distribution{quantile="0.5"}[1h]) > 0.3
+        for: 5m
+        labels:
+          severity: info
+          service: iit-ml-service
+        annotations:
+          summary: "Unusual risk distribution shift detected"
+          description: "Prediction risk distribution has changed significantly in the last 10 minutes"

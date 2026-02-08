@@ -1,0 +1,473 @@
+{
+  "name": "Enhanced NG TB/HIV Guidelines AI Agent",
+  "description": "Intelligent clinical decision support system for Nigerian healthcare professionals based on 2021 National TB/HIV Guidelines",
+  "version": "2.0",
+  "type": "scenario",
+  "modules": [
+    {
+      "id": "gform_trigger",
+      "type": "trigger",
+      "name": "Healthcare Query Submission",
+      "app": "googleForms",
+      "auth": "{{connections.google_forms}}",
+      "parent": null,
+      "operation": {
+        "name": "New Submission",
+        "operationId": "getFormResponses",
+        "input": {
+          "formId": "{{env.FORM_ID}}"
+        },
+        "metadata": {
+          "out": {
+            "responses": [
+              {
+                "questionId": "email",
+                "questionName": "Healthcare Worker Email",
+                "answer": "{{5.answer}}"
+              },
+              {
+                "questionId": "question",
+                "questionName": "Clinical Question",
+                "answer": "{{1.answer}}"
+              },
+              {
+                "questionId": "patient_category",
+                "questionName": "Patient Category",
+                "answer": "{{2.answer}}"
+              },
+              {
+                "questionId": "urgency",
+                "questionName": "Urgency Level",
+                "answer": "{{3.answer}}"
+              },
+              {
+                "questionId": "facility_level",
+                "questionName": "Health Facility Level",
+                "answer": "{{4.answer}}"
+              }
+            ],
+            "formId": "{{form.id}}",
+            "respondentEmail": "{{respondentEmail}}",
+            "responseId": "{{id}}",
+            "responseTimestamp": "{{createTime}}"
+          }
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "categorize_query",
+      "type": "action",
+      "name": "Categorize Clinical Query",
+      "app": "setMultipleVariables",
+      "auth": null,
+      "parent": "gform_trigger",
+      "operation": {
+        "name": "Set Query Categories",
+        "operationId": "setMultipleVariables",
+        "input": {
+          "variables": [
+            {
+              "name": "query_type",
+              "value": "{{if(contains(lower(gform_trigger.1.answer), 'diagnos'), 'diagnosis', if(contains(lower(gform_trigger.1.answer), 'treat'), 'treatment', if(contains(lower(gform_trigger.1.answer), 'prevent'), 'prevention', if(contains(lower(gform_trigger.1.answer), 'drug'), 'pharmacology', 'general'))))}}"
+            },
+            {
+              "name": "patient_group",
+              "value": "{{if(contains(lower(gform_trigger.1.answer), 'child'), 'pediatric', if(contains(lower(gform_trigger.1.answer), 'pregnant'), 'pregnant', 'adult'))}}"
+            },
+            {
+              "name": "context_priority",
+              "value": "{{if(equals(gform_trigger.3.answer, 'High'), 'urgent', 'standard')}}"
+            }
+          ]
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 120
+      }
+    },
+    {
+      "id": "set_comprehensive_context",
+      "type": "action",
+      "name": "Load Comprehensive Guidelines Context",
+      "app": "setMultipleVariables",
+      "auth": null,
+      "parent": "categorize_query",
+      "operation": {
+        "name": "Set Comprehensive Context",
+        "operationId": "setMultipleVariables",
+        "input": {
+          "variables": [
+            {
+              "name": "context_diagnosis_screening",
+              "value": "NIGERIAN NATIONAL GUIDELINES FOR HIV PREVENTION, TREATMENT AND CARE (2021 EDITION)\n\n**CHAPTER 3: Management of TB/HIV Co-infection in Adults**\n\n**3.2.1 Screening of PLHIV for TB:**\n- Screen ALL PLHIV at every visit for: current cough, fever, weight loss, night sweats\n- ANY symptom = presumptive TB requiring further investigation\n- Use WHO 4-symptom screen (W4SS) as minimum standard\n\n**3.2.2 Diagnosis of Pulmonary TB (PTB):**\n- **FIRST-LINE TEST:** Xpert MTB/RIF assay for ALL presumptive TB cases\n- AFB smear microscopy is NOT recommended as initial test\n- For PLHIV with Advanced HIV Disease (AHD): Add Urine LF-LAM\n- Chest X-ray: supportive but not diagnostic alone\n\n**3.2.3 Diagnosis of Extra-Pulmonary TB (EPTB):**\n- Collect appropriate specimens based on site\n- Use Xpert MTB/RIF on EPTB specimens where possible\n- Histopathology and culture when Xpert unavailable\n\n**3.2.4 Advanced HIV Disease (AHD) Definition:**\n- CD4 count <200 cells/μL OR\n- WHO clinical stage 3 or 4 disease\n- Requires enhanced TB screening including Urine LF-LAM"
+            },
+            {
+              "name": "context_treatment_regimens",
+              "value": "**3.2.5 Treatment of TB among adult PLHIV:**\n\n**REGIMEN 1 (6 months): 2(RHZE)/4(RH)**\n- For: All PTB and EPTB except TB meningitis and osteo-articular TB\n- Intensive phase: 2 months of Rifampicin + Isoniazid + Pyrazinamide + Ethambutol\n- Continuation phase: 4 months of Rifampicin + Isoniazid\n\n**REGIMEN 2 (12 months): 2(RHZE)/10(RH)**\n- For: TB meningitis and osteo-articular TB only\n- Extended continuation phase due to CNS/bone involvement\n\n**Weight-based dosing (See Tables 3 & 4):**\n- 30-37kg: R150+H75+Z400+E275 (intensive) / R150+H75 (continuation)\n- 38-54kg: R300+H150+Z800+E550 (intensive) / R300+H150 (continuation)\n- 55-70kg: R450+H225+Z1200+E825 (intensive) / R450+H225 (continuation)\n- >70kg: R600+H300+Z1600+E1100 (intensive) / R600+H300 (continuation)\n\n**MANDATORY:** Pyridoxine (Vitamin B6) 50mg daily for ALL patients"
+            },
+            {
+              "name": "context_art_tbhiv",
+              "value": "**3.3.3 ART in TB/HIV Co-infection:**\n\n**TIMING:**\n- Start ART in ALL TB patients living with HIV, regardless of CD4 count\n- Sequence: Start TB treatment FIRST, then ART within 2 weeks\n- For TB meningitis: Delay ART by 4-8 weeks to reduce IRIS risk\n\n**PREFERRED 1st-line ART for TB/HIV:**\n1. **TDF + 3TC + DTG** (preferred - minimal interactions)\n2. TDF + 3TC + EFV (alternative)\n3. AZT + 3TC + DTG (if TDF contraindicated)\n\n**SPECIAL CONSIDERATIONS:**\n- **DTG with Rifampicin:** Increase DTG to 50mg TWICE daily\n- **Avoid:** NVP-based regimens in TB/HIV co-infection\n- **PI-based ART:** Use Rifabutin 150mg daily instead of Rifampicin 600mg\n\n**2nd-line options:** See Table 5 for complete regimen details"
+            },
+            {
+              "name": "context_drug_interactions",
+              "value": "**3.4.2 Critical Drug Interactions:**\n\n**RIFAMPICIN effects:**\n- Decreases: PIs, EFV, NVP, DTG levels significantly\n- **DTG + Rifampicin:** MUST double DTG dose to 50mg twice daily\n- **PI + Rifampicin:** Replace with Rifabutin 150mg daily\n\n**RIFABUTIN interactions:**\n- Preferred with PI-based ART\n- Reduce dose to 150mg daily when with PIs\n- Monitor for rifabutin toxicity (uveitis, arthralgia)\n\n**CONTRAINDICATED combinations:**\n- Bedaquiline + Efavirenz (QT prolongation)\n- Never use together\n\n**3.4.3 Overlapping Toxicities:**\n- **Skin rashes:** NVP/EFV + PZA/INH/RIF\n- **Peripheral neuropathy:** NRTIs + INH\n- **Hepatotoxicity:** Multiple ARVs + anti-TB drugs\n- **Management:** Monitor LFTs, stop offending agents if severe"
+            },
+            {
+              "name": "context_tpt_regimens",
+              "value": "**CHAPTER 5: Tuberculosis Preventive Treatment (TPT)**\n\n**5.2 TPT Eligibility:**\n- ALL PLHIV without active TB\n- Screen for TB symptoms at EVERY encounter before TPT\n- Exclude active TB before starting\n\n**5.4 TPT Regimens (Choose ONE):**\n\n**1. 6H (6 months daily Isoniazid):**\n- Adults: INH 300mg daily × 180 doses\n- Children: INH 10mg/kg daily (max 300mg) × 180 doses\n- Add Pyridoxine 25mg daily\n\n**2. 3HP (3 months weekly Rifapentine + Isoniazid):**\n- Adults ≥2 years: RPT 900mg + INH 900mg weekly × 12 doses\n- NOT for: <2 years, pregnant women, PI/NVP-based ART\n- Directly observed therapy recommended\n\n**3. 3HR (3 months daily Isoniazid + Rifampicin):**\n- Adults: INH 300mg + RIF 600mg daily × 90 doses\n- Adjust ART interactions (double DTG if needed)\n\n**4. 1HP (1 month daily Rifapentine + Isoniazid):**\n- Adults: RPT 600mg + INH 300mg daily × 30 doses\n- Newest, shortest option\n- Same contraindications as 3HP"
+            },
+            {
+              "name": "context_pediatric_management",
+              "value": "**CHAPTER 4: TB/HIV in Children and Adolescents**\n\n**4.2 Pediatric TB Diagnosis:**\n- Clinical diagnosis often used (bacteriological confirmation difficult)\n- Contact history + symptoms + chest X-ray + response to treatment\n- Xpert MTB/RIF when specimens available\n\n**4.3 Pediatric TB Treatment:**\n- **Same regimens as adults:** 2(RHZE)/4(RH) for most cases\n- **Weight-based dosing (Tables 10-11):**\n  - 4-7kg: R60+H30+Z150+E100 / R60+H30\n  - 8-11kg: R120+H60+Z300+E200 / R120+H60\n  - 12-15kg: R180+H90+Z450+E300 / R180+H90\n  - 16-24kg: R240+H120+Z600+E400 / R240+H120\n  - 25kg+: Adult dosing\n\n**4.4 Pediatric ART in TB/HIV:**\n- **Preferred:** ABC + 3TC + DTG (>6 years, ≥20kg)\n- **Alternative:** AZT + 3TC + LPV/r (<3 years)\n- See Tables 14-15 for complete pediatric ART options\n\n**4.5 Pediatric TPT:**\n- **6H:** INH 10mg/kg daily × 180 doses (max 300mg)\n- **3HP:** Not recommended <2 years\n- Screen household contacts <5 years for TPT"
+            },
+            {
+              "name": "context_iris_management",
+              "value": "**3.4.4 Immune Reconstitution Inflammatory Syndrome (IRIS):**\n\n**Definition:**\n- Paradoxical worsening of TB symptoms after ART initiation\n- Occurs within 4-8 weeks of starting ART\n- Due to immune system recovery responding to TB antigens\n\n**Clinical presentation:**\n- Fever, enlarged lymph nodes\n- Worsening chest X-ray changes\n- New or worsening TB symptoms\n- Inflammatory response at TB sites\n\n**Management principles:**\n- **Continue both ART and anti-TB treatment**\n- Rule out: treatment failure, drug resistance, new OIs\n- **Mild IRIS:** Symptomatic treatment (paracetamol, NSAIDs)\n- **Severe IRIS:** Corticosteroids (Prednisolone 1-1.5mg/kg daily × 2-4 weeks, then taper)\n\n**Prevention:**\n- Some evidence for starting ART earlier in TB treatment\n- Consider corticosteroids in high-risk patients"
+            },
+            {
+              "name": "system_prompt_enhanced",
+              "value": "You are NIGERIAN TB/HIV CLINICAL ADVISOR, an AI assistant specifically designed for Nigerian healthcare professionals. You provide evidence-based guidance exclusively from the 2021 Nigerian National Guidelines for HIV Prevention, Treatment and Care.\n\n**CORE PRINCIPLES:**\n1. **EVIDENCE-ONLY:** Answer solely from provided guidelines. Never use external knowledge.\n2. **PRECISION:** Cite specific chapters, sections, and table numbers (e.g., 'Chapter 3.2.5, Table 3')\n3. **SAFETY-FIRST:** Always emphasize when to refer to medical officer or specialist\n4. **PRACTICAL:** Provide actionable, step-by-step guidance when available\n5. **CONTEXTUAL:** Consider patient category, facility level, and urgency\n\n**RESPONSE STRUCTURE:**\n1. **Direct Answer:** Address the specific question immediately\n2. **Clinical Context:** Relevant background from guidelines  \n3. **Actionable Steps:** What to do next (when applicable)\n4. **Key Warnings:** Critical safety information\n5. **Referral Guidance:** When to escalate care\n\n**LIMITATIONS:**\n- Cannot diagnose individual patients\n- Cannot replace clinical judgment\n- Cannot provide guidance beyond the 2021 guidelines scope\n- If information not found: 'The 2021 guidelines do not address this specific scenario. Consult full guidelines document or medical supervisor.'\n\n**TONE:** Professional, clear, supportive of frontline healthcare workers"
+            }
+          ]
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 240
+      }
+    },
+    {
+      "id": "route_by_query_type",
+      "type": "router",
+      "name": "Route by Query Complexity",
+      "app": "router",
+      "auth": null,
+      "parent": "set_comprehensive_context",
+      "operation": {
+        "routes": [
+          {
+            "label": "Complex Clinical Query",
+            "condition": "{{or(equals(variables.query_type, 'diagnosis'), equals(variables.query_type, 'treatment'), equals(variables.context_priority, 'urgent'))}}"
+          },
+          {
+            "label": "Standard Reference Query",
+            "condition": "{{or(equals(variables.query_type, 'prevention'), equals(variables.query_type, 'pharmacology'), equals(variables.query_type, 'general'))}}"
+          }
+        ]
+      },
+      "position": {
+        "x": 0,
+        "y": 360
+      }
+    },
+    {
+      "id": "ai_call_complex",
+      "type": "action",
+      "name": "AI Response - Complex Query",
+      "app": "http",
+      "auth": null,
+      "parent": "route_by_query_type",
+      "route": "Complex Clinical Query",
+      "operation": {
+        "name": "Enhanced AI Analysis",
+        "operationId": "restApiCall",
+        "input": {
+          "url": "https://api.deepseek.com/v1/chat/completions",
+          "method": "POST",
+          "headers": "{\"Content-Type\":\"application/json\",\"Authorization\":\"Bearer {{env.DEEPSEEK_API_KEY}}\"}",
+          "body": "{\n  \"model\": \"deepseek-chat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"{{variables.system_prompt_enhanced}}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"**CLINICAL CONTEXT:**\\nQuery Type: {{variables.query_type}}\\nPatient Group: {{variables.patient_group}}\\nFacility Level: {{gform_trigger.4.answer}}\\nUrgency: {{gform_trigger.3.answer}}\\n\\n**GUIDELINES DATABASE:**\\n\\n**SCREENING & DIAGNOSIS:**\\n{{variables.context_diagnosis_screening}}\\n\\n**TREATMENT REGIMENS:**\\n{{variables.context_treatment_regimens}}\\n\\n**ART MANAGEMENT:**\\n{{variables.context_art_tbhiv}}\\n\\n**DRUG INTERACTIONS:**\\n{{variables.context_drug_interactions}}\\n\\n**TPT PROTOCOLS:**\\n{{variables.context_tpt_regimens}}\\n\\n**PEDIATRIC GUIDELINES:**\\n{{variables.context_pediatric_management}}\\n\\n**IRIS MANAGEMENT:**\\n{{variables.context_iris_management}}\\n\\n---\\n\\n**HEALTHCARE WORKER QUESTION:**\\n\\\"{{{gform_trigger.1.answer}}}\\\"\\n\\n**PROVIDE STRUCTURED CLINICAL GUIDANCE:**\"\n    }\n  ],\n  \"temperature\": 0.1,\n  \"max_tokens\": 3000\n}"
+        }
+      },
+      "position": {
+        "x": -200,
+        "y": 480
+      }
+    },
+    {
+      "id": "ai_call_standard",
+      "type": "action",
+      "name": "AI Response - Standard Query", 
+      "app": "http",
+      "auth": null,
+      "parent": "route_by_query_type",
+      "route": "Standard Reference Query",
+      "operation": {
+        "name": "Standard AI Reference",
+        "operationId": "restApiCall",
+        "input": {
+          "url": "https://api.deepseek.com/v1/chat/completions",
+          "method": "POST",
+          "headers": "{\"Content-Type\":\"application/json\",\"Authorization\":\"Bearer {{env.DEEPSEEK_API_KEY}}\"}",
+          "body": "{\n  \"model\": \"deepseek-chat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"{{variables.system_prompt_enhanced}}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"**GUIDELINES REFERENCE REQUEST:**\\n\\n**RELEVANT SECTIONS:**\\n{{if(equals(variables.query_type, 'prevention'), variables.context_tpt_regimens, if(equals(variables.query_type, 'pharmacology'), variables.context_drug_interactions, join(variables.context_diagnosis_screening, variables.context_treatment_regimens)))}}\\n\\n---\\n\\n**QUESTION:** \\\"{{{gform_trigger.1.answer}}}\\\"\\n\\n**PROVIDE CONCISE REFERENCE ANSWER:**\"\n    }\n  ],\n  \"temperature\": 0.05,\n  \"max_tokens\": 1500\n}"
+        }
+      },
+      "position": {
+        "x": 200,
+        "y": 480
+      }
+    },
+    {
+      "id": "merge_ai_responses",
+      "type": "aggregator",
+      "name": "Merge AI Responses",
+      "app": "aggregator",
+      "auth": null,
+      "parent": ["ai_call_complex", "ai_call_standard"],
+      "operation": {
+        "name": "Merge Parallel Results",
+        "operationId": "mergeResults"
+      },
+      "position": {
+        "x": 0,
+        "y": 600
+      }
+    },
+    {
+      "id": "parse_ai_response",
+      "type": "action",
+      "name": "Parse and Enhance AI Response",
+      "app": "json",
+      "auth": null,
+      "parent": "merge_ai_responses",
+      "operation": {
+        "name": "Parse and Enhance Response",
+        "operationId": "parseJson",
+        "input": {
+          "data": "{{coalesce(ai_call_complex.body, ai_call_standard.body)}}",
+          "schema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"choices\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"message\": {\n            \"type\": \"object\",\n            \"properties\": {\n              \"content\": {\n                \"type\": \"string\"\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}"
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 720
+      }
+    },
+    {
+      "id": "format_final_response",
+      "type": "action",
+      "name": "Format Clinical Response",
+      "app": "setMultipleVariables",
+      "auth": null,
+      "parent": "parse_ai_response",
+      "operation": {
+        "name": "Format Final Response",
+        "operationId": "setMultipleVariables",
+        "input": {
+          "variables": [
+            {
+              "name": "final_response",
+              "value": "🏥 **NIGERIAN TB/HIV CLINICAL GUIDANCE**\\n\\n**Query ID:** {{gform_trigger.responseId}}\\n**Timestamp:** {{formatDate(gform_trigger.responseTimestamp, 'DD/MM/YYYY HH:mm')}}\\n**Query Type:** {{variables.query_type}} | **Priority:** {{gform_trigger.3.answer}}\\n\\n---\\n\\n{{parse_ai_response.choices[0].message.content}}\\n\\n---\\n\\n**⚠️ CLINICAL DISCLAIMER:**\\nThis guidance is based on 2021 Nigerian National Guidelines. Always:\\n• Use clinical judgment for individual patients\\n• Consult medical officer for complex cases\\n• Refer to full guidelines for comprehensive information\\n• Report adverse events through appropriate channels\\n\\n**📞 For urgent clinical queries, contact your medical supervisor immediately.**\\n\\n*Generated by NG TB/HIV Guidelines AI Assistant v2.0*"
+            },
+            {
+              "name": "response_metadata",
+              "value": "{\n  \"query_id\": \"{{gform_trigger.responseId}}\",\n  \"query_type\": \"{{variables.query_type}}\",\n  \"patient_group\": \"{{variables.patient_group}}\",\n  \"urgency\": \"{{gform_trigger.3.answer}}\",\n  \"facility_level\": \"{{gform_trigger.4.answer}}\",\n  \"processing_route\": \"{{if(ai_call_complex, 'complex', 'standard')}}\",\n  \"timestamp\": \"{{gform_trigger.responseTimestamp}}\",\n  \"guidelines_version\": \"2021\"\n}"
+            }
+          ]
+        }
+      },
+      "position": {
+        "x": 0,
+        "y": 840
+      }
+    },
+    {
+      "id": "parallel_logging",
+      "type": "parallel",
+      "name": "Parallel Response Actions",
+      "app": "parallel",
+      "auth": null,
+      "parent": "format_final_response",
+      "branches": [
+        {
+          "name": "Log to Analytics Sheet",
+          "modules": [
+            {
+              "id": "gsheets_analytics",
+              "type": "action", 
+              "name": "Log Analytics",
+              "app": "googleSheets",
+              "auth": "{{connections.google_sheets}}",
+              "operation": {
+                "name": "Add Analytics Row",
+                "operationId": "addRow",
+                "input": {
+                  "spreadsheetId": "{{env.ANALYTICS_SHEET_ID}}",
+                  "sheetId": 0,
+                  "cellData": [
+                    {
+                      "columnName": "Timestamp",
+                      "value": "{{gform_trigger.responseTimestamp}}"
+                    },
+                    {
+                      "columnName": "Query_ID",
+                      "value": "{{gform_trigger.responseId}}"
+                    },
+                    {
+                      "columnName": "Question",
+                      "value": "{{gform_trigger.1.answer}}"
+                    },
+                    {
+                      "columnName": "Query_Type",
+                      "value": "{{variables.query_type}}"
+                    },
+                    {
+                      "columnName": "Patient_Group",
+                      "value": "{{variables.patient_group}}"
+                    },
+                    {
+                      "columnName": "Urgency",
+                      "value": "{{gform_trigger.3.answer}}"
+                    },
+                    {
+                      "columnName": "Facility_Level",
+                      "value": "{{gform_trigger.4.answer}}"
+                    },
+                    {
+                      "columnName": "Processing_Route",
+                      "value": "{{if(ai_call_complex, 'complex', 'standard')}}"
+                    },
+                    {
+                      "columnName": "Healthcare_Worker_Email",
+                      "value": "{{gform_trigger.5.answer}}"
+                    },
+                    {
+                      "columnName": "AI_Response_Length",
+                      "value": "{{length(parse_ai_response.choices[0].message.content)}}"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Email Response",
+          "modules": [
+            {
+              "id": "email_response",
+              "type": "action",
+              "name": "Email Clinical Guidance",
+              "app": "email",
+              "auth": "{{connections.email}}",
+              "operation": {
+                "name": "Send Email",
+                "operationId": "sendEmail",
+                "input": {
+                  "to": "{{gform_trigger.5.answer}}",
+                  "subject": "[URGENT] TB/HIV Clinical Guidance - Query #{{gform_trigger.responseId}}",
+                  "htmlBody": "<div style='font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;'>{{replace(variables.final_response, '\n', '<br>')}}</div>",
+                  "from": "{{env.SYSTEM_EMAIL}}"
+                },
+                "condition": "{{equals(gform_trigger.3.answer, 'High')}}"
+              }
+            }
+          ]
+        }
+      ],
+      "position": {
+        "x": 0,
+        "y": 960
+      }
+    },
+    {
+      "id": "error_handler",
+      "type": "error_handler",
+      "name": "Global Error Handler",
+      "app": "errorHandler",
+      "auth": null,
+      "scope": "global",
+      "operation": {
+        "name": "Handle System Errors",
+        "actions": [
+          {
+            "type": "log",
+            "level": "error",
+            "message": "TB/HIV AI Agent Error: {{error.message}} | Query: {{gform_trigger.1.answer}}"
+          },
+          {
+            "type": "email",
+            "to": "{{env.ADMIN_EMAIL}}",
+            "subject": "TB/HIV AI Agent System Error",
+            "body": "Error occurred in TB/HIV AI Agent:\n\nError: {{error.message}}\nQuery: {{gform_trigger.1.answer}}\nUser: {{gform_trigger.5.answer}}\nTimestamp: {{gform_trigger.responseTimestamp}}"
+          },
+          {
+            "type": "fallback_response",
+            "message": "⚠️ **SYSTEM TEMPORARILY UNAVAILABLE**\\n\\nWe apologize, but the TB/HIV Guidelines AI is currently experiencing technical issues.\\n\\n**IMMEDIATE ACTIONS:**\\n• Consult the full 2021 Nigerian National Guidelines document\\n• Contact your medical supervisor for urgent queries\\n• Try again in a few minutes\\n\\n**For emergency cases, contact your facility's medical officer immediately.**\\n\\nQuery ID: {{gform_trigger.responseId}} has been logged for follow-up."
+          }
+        ]
+      },
+      "position": {
+        "x": 400,
+        "y": 500
+      }
+    }
+  ],
+  "environment_variables": {
+    "DEEPSEEK_API_KEY": "sk-your-deepseek-api-key-here",
+    "FORM_ID": "your-google-form-id",
+    "ANALYTICS_SHEET_ID": "your-analytics-sheet-id", 
+    "SYSTEM_EMAIL": "tbhiv-ai@yourfacility.ng",
+    "ADMIN_EMAIL": "admin@yourfacility.ng"
+  },
+  "connections": {
+    "google_forms": "oauth2_google_forms_connection",
+    "google_sheets": "oauth2_google_sheets_connection", 
+    "email": "smtp_email_connection"
+  },
+  "tags": [
+    "AI",
+    "Healthcare",
+    "Nigeria",
+    "TB",
+    "HIV",
+    "Clinical-Decision-Support",
+    "Guidelines",
+    "Deepseek",
+    "Enhanced"
+  ],
+  "configuration": {
+    "retry_policy": {
+      "max_retries": 3,
+      "retry_delay": "5s",
+      "exponential_backoff": true
+    },
+    "timeout_settings": {
+      "ai_call_timeout": "60s",
+      "email_timeout": "30s",
+      "sheets_timeout": "15s"
+    },
+    "monitoring": {
+      "enable_performance_tracking": true,
+      "log_level": "info",
+      "alert_on_errors": true,
+      "response_time_threshold": "30s"
+    }
+  },
+  "deployment_notes": {
+    "prerequisites": [
+      "Google Forms with fields: Clinical Question, Patient Category, Urgency Level, Health Facility Level, Healthcare Worker Email",
+      "Google Sheets for analytics logging with appropriate column headers",
+      "Deepseek API account with sufficient credits",
+      "Email service (SMTP) configuration for notifications",
+      "Proper OAuth2 connections for Google services"
+    ],
+    "security_considerations": [
+      "Store API keys in environment variables, never hardcode",
+      "Use OAuth2 for Google service authentication",
+      "Implement rate limiting to prevent abuse",
+      "Ensure HIPAA-compliant handling of any patient information",
+      "Regular security audits of the system"
+    ],
+    "maintenance_schedule": [
+      "Monthly: Review and update guidelines context as new versions are released",
+      "Weekly: Monitor analytics for usage patterns and errors",
+      "Daily: Check system health and response times",
+      "Quarterly: Update AI model if newer versions become available"
+    ]
+  }

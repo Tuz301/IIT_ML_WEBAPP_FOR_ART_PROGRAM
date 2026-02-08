@@ -1,0 +1,33 @@
+{
+  "name": "Daily Outlook Email Workflow",
+  "description": "Sends an automated email every day at 8:00am to rakosu@ihvnigeria.org with subject 'AI workflow testing 1. 2. 3'.",
+  "modules": [
+    {
+      "id": 1,
+      "name": "Scheduler",
+      "type": "tools:Scheduler",
+      "operation": "oncePerDay",
+      "parameters": {
+        "time": "08:00",
+        "daysOfWeek": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+      }
+    },
+    {
+      "id": 2,
+      "name": "Send Email",
+      "type": "microsoft365:Mail",
+      "operation": "sendMail",
+      "parameters": {
+        "to": ["rakosu@ihvnigeria.org"],
+        "subject": "AI workflow testing 1. 2. 3",
+        "body": "This is an automated test email sent by Make.com AI workflow at 8:00am."
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": 1,
+      "to": 2
+    }
+  ]
+}
