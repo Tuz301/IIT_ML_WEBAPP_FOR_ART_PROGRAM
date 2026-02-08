@@ -1,0 +1,70 @@
+.PHONY: help install test build up down logs clean train
+
+help:
+	@echo "IIT Prediction ML Service - Makefile Commands"
+	@echo ""
+	@echo "Development:"
+	@echo "  make install    - Install Python dependencies"
+	@echo "  make test       - Run test suite with coverage"
+	@echo "  make lint       - Run code linting"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make build      - Build Docker image"
+	@echo "  make up         - Start all services with docker-compose"
+	@echo "  make down       - Stop all services"
+	@echo "  make logs       - View service logs"
+	@echo "  make restart    - Restart all services"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  make train      - Train model from JSON directory"
+	@echo "  make api-test   - Test API endpoints"
+	@echo "  make clean      - Remove cache files and containers"
+
+install:
+	pip install -r requirements.txt
+
+test:
+	pytest tests/ -v --cov=app --cov-report=html --cov-report=term
+
+lint:
+	flake8 app/ --max-line-length=120
+	mypy app/ --ignore-missing-imports
+
+build:
+	docker-compose build
+
+up:
+	docker-compose up -d
+	@echo "Services started. API: http://localhost:8000"
+	@echo "Prometheus: http://localhost:9090"
+	@echo "Grafana: http://localhost:3000 (admin/admin)"
+
+down:
+	docker-compose down
+
+logs:
+	docker-compose logs -f ml_api
+
+restart:
+	docker-compose restart
+
+train:
+	@echo "Usage: make train JSON_DIR=/path/to/json/files"
+	@if [ -z "$(JSON_DIR)" ]; then \
+		echo "Error: JSON_DIR not set"; \
+		exit 1; \
+	fi
+	python scripts/train_model.py $(JSON_DIR) --output-dir ./models
+
+api-test:
+	python scripts/test_prediction.py
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	find . -type f -name "*.pyo" -delete
+	find . -type d -name "*.egg-info" -exec rm -rf {} +
+	find . -type d -name ".pytest_cache" -exec rm -rf {} +
+	rm -rf htmlcov/
+	rm -rf .coverage
+	docker-compose down -v

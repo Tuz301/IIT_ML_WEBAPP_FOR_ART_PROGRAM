@@ -1,0 +1,79 @@
+{
+  "model_type": "LightGBM",
+  "model_version": "1.0.0-demo",
+  "features_used": [
+    "age",
+    "age_group",
+    "gender",
+    "has_state",
+    "has_city",
+    "has_phone",
+    "has_pharmacy_history",
+    "total_dispensations",
+    "avg_days_supply",
+    "last_days_supply",
+    "days_since_last_refill",
+    "refill_frequency_3m",
+    "refill_frequency_6m",
+    "mmd_ratio",
+    "regimen_stability",
+    "last_regimen_complexity",
+    "adherence_counseling_count",
+    "total_visits",
+    "visit_frequency_3m",
+    "visit_frequency_6m",
+    "visit_frequency_12m",
+    "days_since_last_visit",
+    "visit_regularity",
+    "clinical_visit_ratio",
+    "who_stage",
+    "has_vl_data",
+    "recent_vl_tests",
+    "has_tb_symptoms",
+    "functional_status",
+    "pregnancy_status",
+    "adherence_level",
+    "month",
+    "quarter",
+    "is_holiday_season",
+    "is_rainy_season",
+    "day_of_week",
+    "is_year_end"
+  ],
+  "num_features": 37,
+  "target": "IIT_risk",
+  "training_samples": 1000,
+  "metrics": {
+    "auc": 0.85,
+    "precision": 0.82,
+    "recall": 0.78,
+    "f1": 0.8
+  },
+  "feature_importance": {
+    "top_5_features": [
+      {
+        "feature": "visit_frequency_3m",
+        "importance": 2308.86852163414
+      },
+      {
+        "feature": "days_since_last_refill",
+        "importance": 2010.37045928312
+      },
+      {
+        "feature": "adherence_level",
+        "importance": 1796.6303084082901
+      },
+      {
+        "feature": "total_dispensations",
+        "importance": 344.451045605354
+      },
+      {
+        "feature": "avg_days_supply",
+        "importance": 77.93017331531155
+      }
+    ]
+  },
+  "created_at": "2026-01-30T12:51:06.019619",
+  "is_demo": true,
+  "description": "Demo model for testing prediction endpoints"
+}
