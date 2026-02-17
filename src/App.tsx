@@ -3,6 +3,7 @@ import { Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Navigation } from './components/Navigation';
 import ProtectedRoute from './components/ProtectedRoute';
+import { Toaster } from './components/ui/toaster';
 
 // Lazy load components for better performance
 const Login = lazy(() => import('./pages/Login'));
@@ -16,6 +17,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const Profile = lazy(() => import('./pages/Profile'));
 const FieldOperations = lazy(() => import('./pages/FieldOperations'));
 const Demo = lazy(() => import('./pages/Demo'));
+const ComponentShowcase = lazy(() => import('./components/examples/ComponentShowcase'));
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -174,10 +176,20 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Component Showcase - Public route for demonstrating new shadcn/ui components */}
+              <Route
+                path="/showcase"
+                element={
+                  <PageWrapper>
+                    <ComponentShowcase />
+                  </PageWrapper>
+                }
+              />
             </Routes>
           </AnimatePresence>
         </Suspense>
       </main>
+      <Toaster />
     </div>
   );
 }

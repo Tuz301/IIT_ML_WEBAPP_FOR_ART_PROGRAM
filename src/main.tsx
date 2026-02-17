@@ -6,6 +6,10 @@ import { ApiProvider } from "./contexts/ApiContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import "./index.css";
 import App from "./App.tsx";
+import { initSentry } from "./lib/sentry";
+
+// Initialize Sentry for error tracking
+initSentry();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

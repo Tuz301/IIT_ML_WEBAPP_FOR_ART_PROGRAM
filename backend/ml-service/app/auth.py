@@ -60,8 +60,9 @@ def get_password_hash(password: str) -> str:
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
     """Authenticate a user by username/email and password"""
-    # Try username first, then email
-    user = db.query(User).filter(
+    from sqlalchemy.orm import joinedload
+    # Try username first, then email, with eager loading of roles
+    user = db.query(User).options(joinedload(User.roles)).filter(
         (User.username == username) | (User.email == username)
     ).first()
 

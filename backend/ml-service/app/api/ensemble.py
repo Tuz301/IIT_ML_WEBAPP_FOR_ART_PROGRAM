@@ -73,7 +73,75 @@ class EnsemblePredictionResponse(BaseModel):
     created_at: str
 
 
-@router.post("/ensembles", response_model=EnsembleResponse)
+@router.post("/ensembles", response_model=EnsembleResponse,
+            summary="Create Ensemble Configuration",
+            description="""Create a new ensemble configuration to combine multiple machine learning models for improved prediction accuracy.
+
+            **Ensemble Types:**
+            - **Averaging**: Simple average of all model predictions
+            - **Weighted Averaging**: Custom weights for each model's contribution
+            - **Voting**: Majority or soft voting among models
+            - **Stacking**: Meta-model learns to combine base model predictions
+            - **Boosting**: Sequential model combination with error correction
+
+            **Configuration Options:**
+            - **model_ids**: List of base model IDs to include in ensemble
+            - **weights**: Optional custom weights for weighted methods
+            - **voting_strategy**: How to combine predictions (majority, soft, weighted)
+            - **meta_model_id**: ID of meta-model for stacking ensembles
+            - **threshold**: Decision threshold for binary classification
+
+            **Performance Benefits:**
+            - Improved prediction accuracy through model diversity
+            - Reduced variance and overfitting
+            - Better generalization to unseen data
+            - Robustness against individual model failures
+
+            **Clinical Applications:**
+            - Combine different IIT risk prediction models
+            - Leverage complementary strengths of various algorithms
+            - Increase confidence in high-stakes clinical predictions
+            - Provide more reliable risk assessments
+
+            **Use Cases:**
+            - Production model deployment with improved accuracy
+            - A/B testing different model combinations
+            - Research on ensemble effectiveness for IIT prediction
+            - Redundancy and reliability in clinical decision support
+            """,
+            responses={
+                200: {
+                    "description": "Ensemble created successfully",
+                    "model": EnsembleResponse,
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "ensemble_id": "ensemble_abc123",
+                                "ensemble_type": "weighted_averaging",
+                                "model_ids": ["model_1", "model_2", "model_3"],
+                                "weights": [0.5, 0.3, 0.2],
+                                "voting_strategy": "soft",
+                                "meta_model_id": None,
+                                "threshold": 0.5,
+                                "created_at": "2025-01-15T10:30:00"
+                            }
+                        }
+                    }
+                },
+                400: {
+                    "description": "Invalid ensemble configuration",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "detail": "Invalid ensemble type or model configuration"
+                            }
+                        }
+                    }
+                },
+                500: {
+                    "description": "Internal server error during ensemble creation"
+                }
+            })
 async def create_ensemble(
     request: EnsembleCreateRequest,
     db: Session = Depends(get_db),
@@ -120,7 +188,55 @@ async def create_ensemble(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/ensembles", response_model=List[EnsembleResponse])
+@router.get("/ensembles", response_model=List[EnsembleResponse],
+            summary="List Ensemble Configurations",
+            description="""Retrieve a list of all ensemble configurations with optional filtering by ensemble type.
+
+            **Filtering Options:**
+            - **ensemble_type**: Filter results by specific ensemble type
+            - Results ordered by creation date (newest first)
+
+            **Ensemble Information Returned:**
+            - **ensemble_id**: Unique identifier for the ensemble
+            - **ensemble_type**: Type of ensemble (averaging, voting, stacking, etc.)
+            - **model_ids**: List of base model IDs in the ensemble
+            - **weights**: Custom weights if applicable
+            - **voting_strategy**: Strategy for combining predictions
+            - **meta_model_id**: Meta-model for stacking ensembles
+            - **threshold**: Decision threshold for predictions
+            - **created_at**: Timestamp of ensemble creation
+
+            **Use Cases:**
+            - Browse available ensemble configurations
+            - Find ensembles by type for specific use cases
+            - Review ensemble configurations before making predictions
+            - Audit and management of ensemble models
+            """,
+            responses={
+                200: {
+                    "description": "Ensemble configurations retrieved successfully",
+                    "model": List[EnsembleResponse],
+                    "content": {
+                        "application/json": {
+                            "example": [
+                                {
+                                    "ensemble_id": "ensemble_abc123",
+                                    "ensemble_type": "weighted_averaging",
+                                    "model_ids": ["model_1", "model_2"],
+                                    "weights": [0.6, 0.4],
+                                    "voting_strategy": "soft",
+                                    "meta_model_id": None,
+                                    "threshold": 0.5,
+                                    "created_at": "2025-01-15T10:30:00"
+                                }
+                            ]
+                        }
+                    }
+                },
+                500: {
+                    "description": "Internal server error during ensemble retrieval"
+                }
+            })
 async def list_ensembles(
     ensemble_type: Optional[EnsembleTypeEnum] = Query(None, description="Filter by ensemble type"),
     db: Session = Depends(get_db),
@@ -154,7 +270,57 @@ async def list_ensembles(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/ensembles/{ensemble_id}", response_model=EnsembleResponse)
+@router.get("/ensembles/{ensemble_id}", response_model=EnsembleResponse,
+            summary="Get Ensemble Configuration",
+            description="""Retrieve detailed information about a specific ensemble configuration.
+
+            **Configuration Details:**
+            - Complete ensemble configuration parameters
+            - List of constituent models and their roles
+            - Weights and voting strategy settings
+            - Meta-model information for stacking ensembles
+            - Creation timestamp for tracking
+
+            **Use Cases:**
+            - Review ensemble configuration before deployment
+            - Understand model composition and weights
+            - Debug ensemble prediction behavior
+            - Audit ensemble configurations for compliance
+            - Document ensemble setup for research purposes
+            """,
+            responses={
+                200: {
+                    "description": "Ensemble configuration retrieved successfully",
+                    "model": EnsembleResponse,
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "ensemble_id": "ensemble_abc123",
+                                "ensemble_type": "stacking",
+                                "model_ids": ["model_1", "model_2", "model_3"],
+                                "weights": None,
+                                "voting_strategy": "soft",
+                                "meta_model_id": "meta_model_1",
+                                "threshold": 0.5,
+                                "created_at": "2025-01-15T10:30:00"
+                            }
+                        }
+                    }
+                },
+                404: {
+                    "description": "Ensemble configuration not found",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "detail": "Ensemble not found"
+                            }
+                        }
+                    }
+                },
+                500: {
+                    "description": "Internal server error during ensemble retrieval"
+                }
+            })
 async def get_ensemble(
     ensemble_id: str,
     db: Session = Depends(get_db),
@@ -187,7 +353,80 @@ async def get_ensemble(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/ensembles/{ensemble_id}/predict", response_model=EnsemblePredictionResponse)
+@router.post("/ensembles/{ensemble_id}/predict", response_model=EnsemblePredictionResponse,
+            summary="Make Ensemble Prediction",
+            description="""Generate an IIT risk prediction using a specified ensemble configuration.
+
+            **Prediction Process:**
+            1. **Feature Preparation**: Extract and validate patient features
+            2. **Base Model Predictions**: Generate predictions from all constituent models
+            3. **Ensemble Combination**: Combine predictions using configured strategy
+            4. **Risk Assessment**: Calculate final risk score and classification
+            5. **Confidence Calculation**: Assess prediction reliability
+
+            **Response Components:**
+            - **ensemble_score**: Final combined risk score (0-1)
+            - **risk_level**: Categorized risk (Low, Medium, High)
+            - **individual_predictions**: Scores from each base model
+            - **confidence_score**: Reliability measure of the prediction
+            - **prediction_id**: Unique identifier for result tracking
+
+            **Ensemble Strategies:**
+            - **Averaging**: Mean of all model scores
+            - **Weighted Averaging**: Custom weighted mean
+            - **Voting**: Majority or soft voting
+            - **Stacking**: Meta-model prediction
+            - **Boosting**: Sequential model combination
+
+            **Clinical Applications:**
+            - High-accuracy IIT risk assessment
+            - Leveraging multiple model perspectives
+            - Increased confidence in predictions
+            - Robust clinical decision support
+
+            **Use Cases:**
+            - Production risk prediction with improved accuracy
+            - A/B testing ensemble vs single model performance
+            - Research on ensemble effectiveness
+            - Redundancy in critical clinical predictions
+            """,
+            responses={
+                200: {
+                    "description": "Ensemble prediction generated successfully",
+                    "model": EnsemblePredictionResponse,
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "ensemble_id": "ensemble_abc123",
+                                "prediction_id": "pred_xyz789",
+                                "patient_uuid": "patient_123",
+                                "ensemble_score": 0.68,
+                                "risk_level": "High",
+                                "individual_predictions": {
+                                    "model_1": 0.65,
+                                    "model_2": 0.72,
+                                    "model_3": 0.67
+                                },
+                                "confidence_score": 0.85,
+                                "created_at": "2025-01-15T10:30:00"
+                            }
+                        }
+                    }
+                },
+                404: {
+                    "description": "Ensemble configuration not found",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "detail": "Ensemble not found"
+                            }
+                        }
+                    }
+                },
+                500: {
+                    "description": "Internal server error during prediction"
+                }
+            })
 async def predict_with_ensemble(
     ensemble_id: str,
     request: EnsemblePredictionRequest,
@@ -226,7 +465,43 @@ async def predict_with_ensemble(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/ensembles/{ensemble_id}/predictions", response_model=List[EnsemblePredictionResponse])
+@router.get("/ensembles/{ensemble_id}/predictions", response_model=List[EnsemblePredictionResponse],
+            summary="Get Ensemble Predictions",
+            description="""Retrieve predictions made by a specific ensemble configuration with optional filtering.
+
+            **Filtering Options:**
+            - **patient_uuid**: Filter predictions for a specific patient
+            - **limit**: Maximum number of results (1-1000, default: 50)
+            - **offset**: Number of results to skip for pagination
+
+            **Prediction Information:**
+            - **prediction_id**: Unique identifier for each prediction
+            - **patient_uuid**: Patient associated with the prediction
+            - **ensemble_score**: Final risk score from ensemble
+            - **risk_level**: Categorized risk level
+            - **individual_predictions**: Scores from each base model
+            - **confidence_score**: Prediction reliability measure
+            - **created_at**: Timestamp of prediction generation
+
+            **Sorting:**
+            - Results ordered by creation date (newest first)
+            - Chronological access to prediction history
+
+            **Use Cases:**
+            - Review ensemble prediction history
+            - Analyze prediction patterns for specific patients
+            - Audit ensemble performance over time
+            - Research data extraction for analysis
+            """,
+            responses={
+                200: {
+                    "description": "Ensemble predictions retrieved successfully",
+                    "model": List[EnsemblePredictionResponse]
+                },
+                500: {
+                    "description": "Internal server error during prediction retrieval"
+                }
+            })
 async def get_ensemble_predictions(
     ensemble_id: str,
     patient_uuid: Optional[str] = Query(None, description="Filter by patient UUID"),
@@ -265,7 +540,45 @@ async def get_ensemble_predictions(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/ensembles/{ensemble_id}/performance")
+@router.get("/ensembles/{ensemble_id}/performance",
+            summary="Get Ensemble Performance Metrics",
+            description="""Retrieve performance metrics for a specific ensemble configuration based on historical predictions.
+
+            **Metrics Calculated:**
+            - **total_predictions**: Number of predictions made by ensemble
+            - **average_score**: Mean ensemble risk score across all predictions
+            - **score_std**: Standard deviation of risk scores (variability measure)
+            - **average_confidence**: Mean confidence score across predictions
+            - **risk_distribution**: Breakdown of predictions by risk level
+
+            **Performance Insights:**
+            - Ensemble consistency through score variability
+            - Prediction reliability through confidence scores
+            - Risk level distribution patterns
+            - Overall ensemble behavior analysis
+
+            **Data Scope:**
+            - Based on most recent 1000 predictions
+            - Representative of current ensemble performance
+            - Updated continuously as new predictions are made
+
+            **Use Cases:**
+            - Monitor ensemble performance over time
+            - Compare different ensemble configurations
+            - Identify performance degradation or improvement
+            - Validate ensemble effectiveness for clinical use
+            """,
+            responses={
+                200: {
+                    "description": "Ensemble performance metrics retrieved successfully"
+                },
+                404: {
+                    "description": "Ensemble configuration not found or no predictions available"
+                },
+                500: {
+                    "description": "Internal server error during performance calculation"
+                }
+            })
 async def get_ensemble_performance(
     ensemble_id: str,
     db: Session = Depends(get_db),
@@ -304,7 +617,54 @@ async def get_ensemble_performance(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/ensembles/{ensemble_id}")
+@router.delete("/ensembles/{ensemble_id}",
+            summary="Delete Ensemble Configuration",
+            description="""Permanently delete an ensemble configuration and all associated predictions.
+
+            **Deletion Process:**
+            1. **Ensemble Lookup**: Verify ensemble exists
+            2. **Prediction Cleanup**: Delete all predictions made by this ensemble
+            3. **Ensemble Removal**: Delete the ensemble configuration
+            4. **Database Commit**: Permanently apply changes
+
+            **Impact:**
+            - Ensemble configuration permanently removed
+            - All historical predictions from this ensemble deleted
+            - No recovery possible after deletion
+            - Ensemble ID becomes unavailable for future use
+
+            **Safety Considerations:**
+            - Requires explicit ensemble_id confirmation
+            - Cascading deletion of associated predictions
+            - Database transaction with rollback on error
+
+            **Use Cases:**
+            - Remove deprecated or poorly performing ensembles
+            - Clean up test/development ensemble configurations
+            - Manage ensemble lifecycle and maintenance
+
+            **Warning:**
+            - This action cannot be undone
+            - Consider archiving important ensemble data before deletion
+            """,
+            responses={
+                200: {
+                    "description": "Ensemble deleted successfully",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "message": "Ensemble ensemble_abc123 deleted successfully"
+                            }
+                        }
+                    }
+                },
+                404: {
+                    "description": "Ensemble configuration not found"
+                },
+                500: {
+                    "description": "Internal server error during ensemble deletion"
+                }
+            })
 async def delete_ensemble(
     ensemble_id: str,
     db: Session = Depends(get_db),
@@ -338,7 +698,52 @@ async def delete_ensemble(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/ensemble-types")
+@router.get("/ensemble-types",
+            summary="Get Available Ensemble Types",
+            description="""Retrieve information about all available ensemble types and their configuration options.
+
+            **Ensemble Types Documented:**
+            - **Averaging**: Simple average of all model predictions with equal weights
+            - **Weighted Averaging**: Custom weights for each model's contribution
+            - **Voting**: Majority or soft voting strategies for combining predictions
+            - **Weighted Voting**: Voting with custom weights for each model
+            - **Stacking**: Meta-model learns optimal combination of base predictions
+            - **Boosting**: Sequential model combination with error correction
+
+            **Type Information Provided:**
+            - **type**: Machine-readable type identifier
+            - **name**: Human-readable type name
+            - **description**: Detailed explanation of the ensemble method
+
+            **Use Cases:**
+            - Explore available ensemble strategies
+            - Understand ensemble type differences before configuration
+            - API documentation and discovery
+            - UI dropdown population for ensemble creation
+            """,
+            responses={
+                200: {
+                    "description": "Ensemble types retrieved successfully",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "types": [
+                                    {
+                                        "type": "averaging",
+                                        "name": "Simple Averaging",
+                                        "description": "Average predictions from all models with equal weights"
+                                    },
+                                    {
+                                        "type": "stacking",
+                                        "name": "Stacking",
+                                        "description": "Use a meta-model to combine predictions from base models"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            })
 async def get_ensemble_types():
     """Get available ensemble types and their descriptions"""
     return {

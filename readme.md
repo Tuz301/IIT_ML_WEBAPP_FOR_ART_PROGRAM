@@ -2,20 +2,53 @@
 
 A production-ready machine learning service with modern React frontend for predicting Interruption in Treatment (IIT) risk in HIV/ART patients.
 
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd my_app
+
+# Install dependencies
+npm install
+
+# Copy environment variables
+cp .env.example .env
+
+# Start development server
+npm run dev
+```
+
+## 📋 Table of Contents
+
+- [Project Overview](#project-overview)
+- [Tech Stack](#tech-stack)
+- [Key Features](#key-features)
+- [Getting Started](#getting-started)
+- [Development Setup](#development-setup)
+- [Component Library](#component-library)
+- [Error Tracking](#error-tracking)
+- [Environment Variables](#environment-variables)
+- [Project Structure](#project-structure)
+- [Available Scripts](#available-scripts)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+
 ## Project Overview
 
 This project consists of two main components:
-1. **Backend ML Service** (`ml-service/`) - FastAPI-based prediction service with LightGBM model
+1. **Backend ML Service** (`backend/ml-service/`) - FastAPI-based prediction service with LightGBM model
 2. **Frontend Dashboard** (`src/`) - Modern React web application for healthcare professionals
 
 ## Project Status
 
 - **Project Type**: Full-Stack ML Healthcare Application
-- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + Framer Motion
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
 - **Backend**: FastAPI + LightGBM + Redis + PostgreSQL
 - **Entry Point**: `src/main.tsx` (React application entry)
 - **Build System**: Vite 7.0.0 (Fast development and build)
-- **Styling System**: Tailwind CSS 3.4.17 with custom healthcare design system
+- **Styling System**: Tailwind CSS 3.4.17 with shadcn/ui components
+- **Error Tracking**: Sentry integration for production monitoring
 
 ## Key Features
 
@@ -114,9 +147,25 @@ project-root/
 - **Vite**: 7.0.0 - Next generation frontend build tool
 - **Tailwind CSS**: 3.4.17 - Atomic CSS framework
 
+### Component Library
+- **shadcn/ui**: Pre-built, accessible components built on Radix UI primitives
+- **Radix UI**: Unstyled, accessible UI primitives
+- **class-variance-authority**: Variant-based component styling
+- **tailwind-merge**: Intelligent Tailwind class merging
+- **lucide-react**: Beautiful, consistent icons
+
 ### Routing and State Management
 - **React Router DOM**: 6.30.1 - Client-side routing
 - **Zustand**: 4.4.7 - Lightweight state management
+
+### Form Handling & Validation
+- **Zod**: 3.25.76 - TypeScript-first schema validation
+- **React Hook Form**: Efficient form handling (ready to integrate)
+
+### Error Tracking & Monitoring
+- **Sentry**: Production error tracking and performance monitoring
+- **Browser tracing**: Performance monitoring
+- **Session replay**: User session recording for debugging
 
 ### Internationalization Support
 - **i18next**: 23.10.1 - Internationalization core library
@@ -124,8 +173,6 @@ project-root/
 - **i18next-browser-languagedetector**: 7.2.0 - Browser language detection
 
 ### UI and Styling
-- **Lucide React**: Beautiful icon library
-- **Headless UI**: 1.7.18 - Unstyled UI components
 - **Framer Motion**: 11.0.8 - Powerful animation library
 - **GSAP**: 3.13.0 - High-performance professional animation library
 - **clsx**: 2.1.0 - Conditional className utility
@@ -278,4 +325,260 @@ The project uses Vite build system:
 - `tsconfig.json` - TypeScript configuration
 - `tailwind.config.js` - Tailwind CSS configuration
 - `postcss.config.js` - PostCSS configuration
+- `components.json` - shadcn/ui component configuration
 - `yw_manifest.json` - Project manifest file
+
+## Component Library (shadcn/ui)
+
+This project uses [shadcn/ui](https://ui.shadcn.com/) - a collection of reusable components built with Radix UI and Tailwind CSS.
+
+### Available Components
+
+Located in [`src/components/ui/`](src/components/ui/):
+
+- **Button** - Versatile button with multiple variants (default, destructive, outline, secondary, ghost, link)
+- **Card** - Container component with header, title, description, content, and footer
+- **Input** - Form input with focus states and validation support
+- **Label** - Form label component
+- **Dialog** - Modal dialog component with overlay and animations
+- **Select** - Dropdown select component with search support
+- **Toast** - Notification system with multiple variants
+
+### Adding New Components
+
+```bash
+# Add a new component
+npx shadcn-ui@latest add [component-name]
+
+# Example: Add badge component
+npx shadcn-ui@latest add badge
+```
+
+### Using Components
+
+```tsx
+import { Button } from "@/components/ui/button"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+
+function Example() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Example Card</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button>Click me</Button>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+## Error Tracking (Sentry)
+
+This project integrates [Sentry](https://sentry.io/) for production error tracking and performance monitoring.
+
+### Setup
+
+1. Create a Sentry account and get your DSN
+2. Add your DSN to `.env`:
+   ```bash
+   VITE_SENTRY_DSN=your_sentry_dsn_here
+   ```
+
+### Usage
+
+```tsx
+import { captureException, addBreadcrumb, setSentryUser } from "@/lib/sentry"
+
+// Track user actions
+addBreadcrumb("User clicked button", "user", "info")
+
+// Set user context
+setSentryUser({ id: "123", email: "user@example.com" })
+
+// Capture errors
+try {
+  // Your code
+} catch (error) {
+  captureException(error, { additionalContext: "value" })
+}
+```
+
+### Features
+
+- **Error Tracking**: Automatic error capture and reporting
+- **Performance Monitoring**: Browser tracing for page load times
+- **Session Replay**: Record user sessions for debugging
+- **Breadcrumbs**: Track user actions leading to errors
+- **User Context**: Associate errors with specific users
+
+## Environment Variables
+
+Copy [`.env.example`](.env.example) to `.env` and configure:
+
+```bash
+# Application
+VITE_APP_NAME=IIT ML Service
+VITE_APP_VERSION=1.0.0
+
+# API
+VITE_API_URL=http://localhost:8000
+
+# Sentry (Optional - for production error tracking)
+VITE_SENTRY_DSN=your_sentry_dsn_here
+
+# Feature Flags
+VITE_ENABLE_ERROR_TRACKING=false
+```
+
+See [`.env.example`](.env.example) for all available options.
+
+## Development Setup
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Python 3.9+ (for backend)
+- Docker (optional, for containerized deployment)
+
+### Frontend Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Backend Setup
+
+```bash
+cd backend/ml-service
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start development server
+uvicorn app.main:app --reload
+
+# Or use Docker
+docker-compose up -d
+```
+
+## Testing
+
+```bash
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+
+# Run E2E tests with Cypress
+npx cypress open
+```
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push code to GitHub
+2. Import project in Vercel
+3. Configure environment variables
+4. Deploy
+
+### Docker
+
+```bash
+# Build production image
+docker build -t iit-ml-service .
+
+# Run container
+docker run -p 5173:5173 iit-ml-service
+```
+
+### Manual Deployment
+
+```bash
+# Build for production
+npm run build
+
+# The dist/ folder contains your production build
+# Deploy dist/ to your hosting service
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Style
+
+- Use TypeScript for type safety
+- Follow existing component patterns
+- Use shadcn/ui components when possible
+- Write meaningful commit messages
+- Add tests for new features
+
+### Project Structure Guidelines
+
+```
+src/
+├── components/
+│   ├── ui/              # shadcn/ui components (don't modify)
+│   └── [feature]/       # Feature-specific components
+├── lib/                 # Utility functions
+├── hooks/               # Custom React hooks
+├── pages/               # Page components
+├── contexts/            # React contexts
+├── services/            # API services
+└── types/               # TypeScript types
+```
+
+## Roadmap
+
+### Completed ✅
+- [x] shadcn/ui component library integration
+- [x] Sentry error tracking setup
+- [x] Environment variable management
+- [x] TypeScript path aliases (`@/`)
+
+### In Progress 🚧
+- [ ] React Hook Form + Zod integration
+- [ ] Clerk/Supabase authentication
+- [ ] PostHog/Plausible analytics
+
+### Planned 📋
+- [ ] File upload integration (Upload Thing/Cloudinary)
+- [ ] Vercel deployment configuration
+- [ ] Performance monitoring with Lighthouse
+- [ ] Empty states and onboarding flows
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For issues and questions:
+- Open an issue on GitHub
+- Check existing documentation
+- Review the code comments and type definitions

@@ -19,6 +19,10 @@ from ..config import get_settings
 settings = get_settings()
 DATABASE_URL = os.getenv("DATABASE_URL", settings.database_url)
 
+# Log the database URL for debugging
+logger.info(f"Database URL: {DATABASE_URL}")
+logger.info(f"Use PostgreSQL: {settings.use_postgres}")
+
 # Connection pool settings
 POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
 MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "20"))
@@ -167,7 +171,7 @@ def get_db() -> Generator[Session, None, None]:
     try:
         yield db
     finally:
-        db.close()
+        db.close()  # This will rollback any uncommitted changes
 
 def verify_database_connectivity() -> bool:
     """

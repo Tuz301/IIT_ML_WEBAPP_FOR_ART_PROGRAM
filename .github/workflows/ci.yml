@@ -1,0 +1,438 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18.x'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  backend-lint:
+    name: Backend Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend/ml-service
+          pip install -r requirements.txt
+          pip install -r tests/requirements-test.txt
+
+      - name: Run Black formatter check
+        run: |
+          cd backend/ml-service
+          black --check app/ tests/
+
+      - name: Run isort import check
+        run: |
+          cd backend/ml-service
+          isort --check-only app/ tests/
+
+      - name: Run Pylint
+        run: |
+          cd backend/ml-service
+          pylint app/ --fail-under=8 || true
+
+      - name: Run mypy type checking
+        run: |
+          cd backend/ml-service
+          mypy app/ || true
+
+  backend-security:
+    name: Backend Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Bandit
+        run: pip install bandit[toml]
+
+      - name: Run Bandit security linter
+        run: |
+          cd backend/ml-service
+          bandit -r app/ -f json -o bandit-report.json || true
+
+      - name: Run Safety check
+        run: |
+          cd backend/ml-service
+          pip install safety
+          safety check --json --output safety-report.json || true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            backend/ml-service/bandit-report.json
+            backend/ml-service/safety-report.json
+
+  backend-unit-tests:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend/ml-service
+          pip install -r requirements.txt
+          pip install -r tests/requirements-test.txt
+
+      - name: Run unit tests with pytest
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+          ENVIRONMENT: test
+        run: |
+          cd backend/ml-service
+          pytest tests/ -m "unit" -v --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/ml-service/coverage.xml
+          flags: backend-unit
+          name: backend-unit-coverage
+
+  backend-integration-tests:
+    name: Backend Integration Tests
+    runs-on: ubuntu-latest
+    needs: backend-unit-tests
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend/ml-service
+          pip install -r requirements.txt
+          pip install -r tests/requirements-test.txt
+
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+          ENVIRONMENT: test
+        run: |
+          cd backend/ml-service
+          pytest tests/ -m "integration" -v --cov=app --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/ml-service/coverage.xml
+          flags: backend-integration
+          name: backend-integration-coverage
+
+  frontend-lint:
+    name: Frontend Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint --if-present
+
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+
+  frontend-unit-tests:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit -- --coverage --maxWorkers=2
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+          flags: frontend-unit
+          name: frontend-unit-coverage
+
+  frontend-e2e-tests:
+    name: Frontend E2E Tests
+    runs-on: ubuntu-latest
+    needs: frontend-unit-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Cypress
+        run: npx cypress install
+
+      - name: Start backend server
+        run: |
+          cd backend/ml-service
+          pip install -r requirements.txt
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+
+      - name: Start frontend server
+        run: |
+          npm run build
+          npm run preview -- --host 0.0.0.0 --port 5173 &
+          sleep 10
+
+      - name: Run Cypress E2E tests
+        run: npx cypress run --config baseUrl=http://localhost:5173
+        continue-on-error: true
+
+      - name: Upload Cypress screenshots
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+
+      - name: Upload Cypress videos
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cypress-videos
+          path: cypress/videos
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: [frontend-lint, frontend-unit-tests]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-dist
+          path: dist/
+
+  docker-scan:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend Docker image
+        run: |
+          cd backend/ml-service
+          docker build -t iit-ml-backend:test .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'iit-ml-backend:test'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [backend-unit-tests, frontend-unit-tests]
+    if: github.ref == 'refs/heads/main'
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd backend/ml-service
+          pip install -r requirements.txt
+          pip install -r tests/requirements-test.txt
+
+      - name: Run performance benchmarks
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          ENVIRONMENT: test
+        run: |
+          cd backend/ml-service
+          pytest tests/ -m "performance" -v --benchmark-only
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [backend-lint, backend-security, backend-unit-tests, backend-integration-tests, frontend-lint, frontend-unit-tests, frontend-e2e-tests, docker-scan]
+    if: always()
+    
+    steps:
+      - name: Check all jobs
+        run: |
+          echo "Backend Lint: ${{ needs.backend-lint.result }}"
+          echo "Backend Security: ${{ needs.backend-security.result }}"
+          echo "Backend Unit Tests: ${{ needs.backend-unit-tests.result }}"
+          echo "Backend Integration Tests: ${{ needs.backend-integration-tests.result }}"
+          echo "Frontend Lint: ${{ needs.frontend-lint.result }}"
+          echo "Frontend Unit Tests: ${{ needs.frontend-unit-tests.result }}"
+          echo "Frontend E2E Tests: ${{ needs.frontend-e2e-tests.result }}"
+          echo "Docker Scan: ${{ needs.docker-scan.result }}"
+          
+          if [ "${{ needs.backend-unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.frontend-unit-tests.result }}" != "success" ]; then
+            echo "Critical tests failed!"
+            exit 1
+          fi

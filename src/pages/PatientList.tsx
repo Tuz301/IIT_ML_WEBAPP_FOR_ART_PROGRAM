@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Filter, Plus, Download, Upload, Trash2, ChevronLeft, ChevronRight, User, Phone, MapPin, Calendar, X } from 'lucide-react';
-import { apiService, PatientListResponse, Patient } from '../services/api';
+import { apiService, Patient } from '../services/api';
 
 const PatientList: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -48,11 +48,13 @@ const PatientList: React.FC = () => {
       if (filters.age_min) params.age_min = parseInt(filters.age_min);
       if (filters.age_max) params.age_max = parseInt(filters.age_max);
 
-      const response: PatientListResponse = await apiService.getPatients(params);
+      const response = await apiService.getPatients(params);
       // Ensure patients is always an array, even if response is malformed
-      setPatients(Array.isArray(response?.patients) ? response.patients : []);
-      setTotal(response?.total ?? 0);
-      setTotalPages(response?.total_pages ?? 0);
+      const patientsData = response.data;
+      setPatients(Array.isArray(patientsData?.patients) ? patientsData.patients : []);
+      setTotal(patientsData?.total ?? 0);
+      // Calculate total pages from total and page size
+      setTotalPages(Math.ceil((patientsData?.total ?? 0) / pageSize));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch patients');
       // Set empty arrays on error to prevent undefined errors

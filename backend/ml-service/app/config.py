@@ -2,6 +2,7 @@
 Configuration management for IIT Prediction ML Service
 """
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from functools import lru_cache
 import secrets
 
@@ -72,14 +73,19 @@ class Settings(BaseSettings):
     api_key_enabled: bool = False
     api_key_header: str = "X-API-Key"
     # CHANGED: Restrict CORS to specific origins instead of wildcard
-    cors_origins: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-    ]
+    # Read from environment variable for flexibility
+    cors_origins: list[str] = Field(
+        default=[
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173",
+            "http://localhost:8080",  # Alternative dev port
+            "http://127.0.0.1:8080",
+        ]
+    )
     # Add production frontend URL via environment variable
-    frontend_url: str = "http://localhost:3000"
+    frontend_url: str = Field(default="http://localhost:3000")
     
     security_enabled: bool = False  # Disabled due to ASGI middleware signature issues
     security_exclude_paths: list[str] = ["/health", "/docs", "/openapi.json", "/metrics"]
@@ -99,8 +105,8 @@ class Settings(BaseSettings):
     
     # Cookie Configuration for JWT
     cookie_domain: str | None = None  # Set for production
-    cookie_secure: bool = True  # CHANGED: Always use secure cookies in production
-    cookie_samesite: str = "lax"  # CHANGED: Use lax for CSRF protection
+    cookie_secure: bool = False  # Use secure cookies only in production (HTTPS)
+    cookie_samesite: str = "lax"  # Use lax for CSRF protection
     
     # Session Configuration
     session_timeout_minutes: int = 30

@@ -19,7 +19,6 @@ from .config import get_settings
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="/health",
     tags=["health"],
     responses={503: {"description": "Service Unavailable"}}
 )
@@ -28,7 +27,7 @@ router = APIRouter(
 START_TIME = time.time()
 
 
-@router.get("/", summary="Basic Health Check")
+@router.get("/health", summary="Basic Health Check")
 async def health_check():
     """
     Basic health check endpoint
@@ -42,7 +41,7 @@ async def health_check():
     }
 
 
-@router.get("/detailed", summary="Detailed Health Check")
+@router.get("/health/detailed", summary="Detailed Health Check")
 async def detailed_health_check(
     db: Session = Depends(get_db)
 ):
@@ -159,7 +158,7 @@ async def detailed_health_check(
     return health_status
 
 
-@router.get("/ready", summary="Readiness Probe")
+@router.get("/health/ready", summary="Readiness Probe")
 async def readiness_check():
     """
     Kubernetes readiness probe - checks if service is ready to serve traffic
@@ -172,7 +171,7 @@ async def readiness_check():
     }
 
 
-@router.get("/live", summary="Liveness Probe")
+@router.get("/health/live", summary="Liveness Probe")
 async def liveness_check():
     """
     Kubernetes liveness probe - checks if service is alive
@@ -184,7 +183,7 @@ async def liveness_check():
     }
 
 
-@router.get("/metrics", summary="Application Metrics")
+@router.get("/health/metrics", summary="Application Metrics")
 async def application_metrics():
     """
     Application-specific metrics for monitoring

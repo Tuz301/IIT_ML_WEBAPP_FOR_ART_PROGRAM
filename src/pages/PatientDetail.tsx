@@ -20,8 +20,8 @@ const PatientDetail: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getPatient(patientUuid!);
-      setPatient(data);
+      const response = await apiService.getPatient(patientUuid!);
+      setPatient(response.data || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch patient');
     } finally {

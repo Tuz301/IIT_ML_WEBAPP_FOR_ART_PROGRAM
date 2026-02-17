@@ -9,7 +9,7 @@ from .config import get_settings
 
 settings = get_settings()
 
-app = FastAPI(title="IIT ML Service", version="1.0.0")
+app = FastAPI(title="IIT ML Service", version="1.0.0", redirect_slashes=False)
 
 # Setup custom error handlers
 setup_error_handlers(app)
@@ -62,6 +62,31 @@ async def add_security_headers(request, call_next):
         if origin:
             response.headers["access_control_allow_origin"] = origin
     return response
+
+# Startup event handler
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database and ML model on startup"""
+    from .core.db import init_database
+    from .ml_model import get_model
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # Initialize database tables
+    try:
+        init_database()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+    
+    # Pre-load ML model
+    try:
+        model = get_model()
+        logger.info(f"ML model loaded: {model is not None}")
+    except Exception as e:
+        logger.error(f"Failed to load ML model: {e}")
+
 
 if __name__ == "__main__":
     import uvicorn

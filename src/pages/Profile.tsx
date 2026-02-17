@@ -57,7 +57,7 @@ const Profile: React.FC = () => {
               {user.username}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 capitalize">
-              {user.role} User
+              {user.roles?.join(', ') || 'User'}
             </p>
           </div>
         </div>
@@ -85,8 +85,8 @@ const Profile: React.FC = () => {
             <div className="flex items-center space-x-3">
               <Shield className="w-5 h-5 text-gray-400" />
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Role</p>
-                <p className="text-gray-900 dark:text-white font-medium capitalize">{user.role}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Roles</p>
+                <p className="text-gray-900 dark:text-white font-medium capitalize">{user.roles?.join(', ') || 'None'}</p>
               </div>
             </div>
 
