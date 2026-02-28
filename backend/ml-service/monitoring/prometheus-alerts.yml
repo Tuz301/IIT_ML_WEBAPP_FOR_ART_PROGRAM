@@ -1,0 +1,184 @@
+# Prometheus Alert Rules for IIT ML Service
+# Place this file in your Prometheus configuration directory
+
+groups:
+  - name: ml_service_alerts
+    interval: 30s
+    rules:
+      # Critical Alerts
+      - alert: ServiceDown
+        expr: up{job="ml-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ml-service
+        annotations:
+          summary: "ML Service is down"
+          description: "The ML service has been down for more than 1 minute."
+          runbook_url: "https://docs.example.com/runbooks/service-down"
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{status=~"5.."}[5m])
+            /
+            rate(http_requests_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: ml-service
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes."
+
+      - alert: DatabaseConnectionFailure
+        expr: db_connection_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ml-service
+        annotations:
+          summary: "Database connection failures detected"
+          description: "{{ $value }} database connection failures in the last minute."
+
+      # Warning Alerts
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_request_duration_seconds_bucket{endpoint="/api/predict"}[5m])
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "High prediction latency"
+          description: "P95 latency for predictions is {{ $value }}s."
+
+      - alert: QueueBacklog
+        expr: rq_queue_size > 100
+        for: 15m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "Queue backlog detected"
+          description: "{{ $value }} jobs are pending in the queue."
+
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state{state="open"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "Circuit breaker is open"
+          description: "Circuit breaker {{ $labels.name }} is open for {{ $labels.duration }}."
+
+      - alert: MemoryUsageHigh
+        expr: |
+          (system_memory_usage / system_memory_total) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}."
+
+      # Info Alerts
+      - alert: ModelAccuracyDrop
+        expr: |
+          model_accuracy < 0.8
+        for: 30m
+        labels:
+          severity: info
+          service: ml-service
+        annotations:
+          summary: "Model accuracy dropped"
+          description: "Model accuracy is {{ $value | humanizePercentage }}, below 80% threshold."
+
+      - alert: HighRiskPredictions
+        expr: |
+          rate(predictions_by_risk_level{risk_level="high"}[1h]) > 10
+        for: 1h
+        labels:
+          severity: info
+          service: ml-service
+        annotations:
+          summary: "Spike in high-risk predictions"
+          description: "{{ $value }} high-risk predictions per hour."
+
+  - name: ml_service_dead_letter_queue
+    interval: 1m
+    rules:
+      - alert: DLQJobsAccumulating
+        expr: dlq_jobs_total > 10
+        for: 30m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "Dead Letter Queue is filling up"
+          description: "{{ $value }} jobs in the DLQ."
+
+      - alert: DLQJobRetryFailing
+        expr: increase(dlq_retries_total[1h]) > increase(dlq_resolved_total[1h])
+        for: 1h
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "DLQ retry rate exceeds resolution rate"
+          description: "Jobs are failing retries faster than being resolved."
+
+  - name: ml_service_security
+    interval: 1m
+    rules:
+      - alert: HighAuthenticationFailures
+        expr: |
+          rate(authentication_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} auth failures per second."
+
+      - alert: UnauthorizedAccessAttempts
+        expr: |
+          rate(unauthorized_access_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: critical
+          service: ml-service
+        annotations:
+          summary: "Unauthorized access attempts detected"
+          description: "{{ $value }} unauthorized attempts per second."
+
+  - name: ml_service_predictions
+    interval: 1m
+    rules:
+      - alert: LowPredictionVolume
+        expr: |
+          rate(predictions_total[1h]) < 1
+        for: 2h
+        labels:
+          severity: info
+          service: ml-service
+        annotations:
+          summary: "Low prediction volume"
+          description: "Less than 1 prediction per second for 2 hours."
+
+      - alert: ModelVersionChanged
+        expr: |
+          changes(model_version[1h]) > 0
+        for: 1m
+        labels:
+          severity: info
+          service: ml-service
+        annotations:
+          summary: "Model version changed"
+          description: "Model version changed to {{ $labels.version }}."

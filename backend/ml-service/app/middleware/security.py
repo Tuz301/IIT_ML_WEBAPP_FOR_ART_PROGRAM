@@ -276,12 +276,28 @@ class SecurityMonitoringMiddleware:
             await self.app(scope, receive, send)
             return
 
+        # Cache the request body to allow re-reading
+        body_bytes = b""
+        received = False
+
+        async def receive_wrapper():
+            nonlocal body_bytes, received
+            if not received:
+                received = True
+                message = await receive()
+                if message["type"] == "http.request":
+                    body_bytes = message.get("body", b"")
+                return message
+            else:
+                # Return cached body on subsequent reads
+                return {"type": "http.request", "body": body_bytes, "more_body": False}
+
         # Build request object for analysis
-        request = Request(scope, receive)
+        request = Request(scope, receive_wrapper)
 
         # Skip security checks for excluded paths
         if any(path in request.url.path for path in self.exclude_paths):
-            await self.app(scope, receive, send)
+            await self.app(scope, receive_wrapper, send)
             return
 
         client_ip = request.client.host if request.client else "unknown"
@@ -322,7 +338,7 @@ class SecurityMonitoringMiddleware:
                 status_code=429,
                 content={"detail": "Too many requests. Please try again later."}
             )
-            await response(scope, receive, send)
+            await response(scope, receive_wrapper, send)
             return
 
         # Suspicious activity detection
@@ -352,7 +368,7 @@ class SecurityMonitoringMiddleware:
                 return
 
         # Enhanced request logging
-        await log_requests(request, lambda req: self.app(scope, receive, send))
+        await log_requests(request, lambda req: self.app(scope, receive_wrapper, send))
 
 
 def setup_security_headers(response: Response):

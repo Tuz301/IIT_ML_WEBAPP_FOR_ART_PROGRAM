@@ -35,7 +35,7 @@ async def run_full_etl_pipeline(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -67,7 +67,7 @@ async def ingest_data(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -112,7 +112,7 @@ async def process_features(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -143,7 +143,7 @@ async def get_etl_status(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -167,7 +167,7 @@ async def get_ingestion_stats(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -189,7 +189,7 @@ async def get_processing_stats(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -215,7 +215,7 @@ async def validate_data_source(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -252,7 +252,7 @@ async def cleanup_etl_data(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -284,7 +284,7 @@ async def list_data_sources(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -329,7 +329,7 @@ async def schedule_etl_job(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:

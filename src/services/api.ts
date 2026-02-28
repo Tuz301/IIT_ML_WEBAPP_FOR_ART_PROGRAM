@@ -10,8 +10,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Cookie names (must match backend)
-const ACCESS_COOKIE_NAME = 'iit_access_token';
-const REFRESH_COOKIE_NAME = 'iit_refresh_token';
+// Cookie names (must match backend) - exported for potential use
+export const ACCESS_COOKIE_NAME = 'iit_access_token';
+export const REFRESH_COOKIE_NAME = 'iit_refresh_token';
 
 export interface ApiResponse<T = any> {
   data?: T;
@@ -114,6 +115,20 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
+
+    // Skip token refresh for auth endpoints to avoid infinite loops
+    const isAuthEndpoint = endpoint.startsWith('/v1/auth/') ||
+                          endpoint === '/v1/refresh' ||
+                          endpoint === '/v1/logout';
+
+    // Auto-refresh token if expired (except for auth endpoints)
+    if (!isAuthEndpoint && this.token && await this.ensureValidToken()) {
+      // Token was refreshed, update authorization header
+      options.headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${this.token}`,
+      };
+    }
 
     const config: RequestInit = {
       headers: {
@@ -528,6 +543,132 @@ class ApiClient {
 
   async getSecurityConfig(): Promise<ApiResponse<any>> {
     return this.request('/v1/security/config');
+  }
+
+  // Circuit Breaker methods
+  async getCircuitBreakers(): Promise<ApiResponse<any>> {
+    return this.request('/circuit-breakers');
+  }
+
+  async getCircuitBreaker(name: string): Promise<ApiResponse<any>> {
+    return this.request(`/circuit-breakers/${name}`);
+  }
+
+  async resetCircuitBreaker(name: string): Promise<ApiResponse<any>> {
+    return this.request(`/circuit-breakers/${name}/reset`, { method: 'POST' });
+  }
+
+  async getCircuitBreakerMetrics(): Promise<ApiResponse<any>> {
+    return this.request('/circuit-breakers/metrics/summary');
+  }
+
+  // Dead Letter Queue methods
+  async getDLQJobs(resolved: boolean = false, limit: number = 100): Promise<ApiResponse<any>> {
+    return this.request(`/dlq?resolved=${resolved}&limit=${limit}`);
+  }
+
+  async getDLQStats(): Promise<ApiResponse<any>> {
+    return this.request('/dlq/stats');
+  }
+
+  async retryDLQJob(originalJobId: string): Promise<ApiResponse<any>> {
+    return this.request(`/dlq/retry/${originalJobId}`, { method: 'POST' });
+  }
+
+  async cleanupDLQ(): Promise<ApiResponse<any>> {
+    return this.request('/dlq/cleanup', { method: 'POST' });
+  }
+
+  // Alerting methods
+  async sendAlert(
+    severity: string,
+    message: string,
+    source?: string,
+    metadata?: Record<string, any>
+  ): Promise<ApiResponse<any>> {
+    return this.request('/v1/alerting/send', {
+      method: 'POST',
+      body: JSON.stringify({ severity, message, source, metadata }),
+    });
+  }
+
+  async getAlertStats(): Promise<ApiResponse<any>> {
+    return this.request('/v1/alerting/stats');
+  }
+
+  // Feature Flags methods
+  async listFeatureFlags(): Promise<ApiResponse<any>> {
+    return this.request('/v1/feature-flags');
+  }
+
+  async getFeatureFlag(flagName: string): Promise<ApiResponse<any>> {
+    return this.request(`/v1/feature-flags/${flagName}`);
+  }
+
+  async checkFeatureFlag(flagName: string, context?: Record<string, any>): Promise<ApiResponse<any>> {
+    return this.request(`/v1/feature-flags/${flagName}/check`, {
+      method: 'POST',
+      body: JSON.stringify({ context }),
+    });
+  }
+
+  // Explainability methods
+  async getFeatureImportance(modelVersion: string): Promise<ApiResponse<any>> {
+    return this.request(`/v1/explainability/feature-importance/${modelVersion}`);
+  }
+
+  async explainPrediction(predictionId: number): Promise<ApiResponse<any>> {
+    return this.request('/v1/explainability/predictions/explain', {
+      method: 'POST',
+      body: JSON.stringify({ prediction_id: predictionId }),
+    });
+  }
+
+  async getPredictionExplanation(predictionId: number): Promise<ApiResponse<any>> {
+    return this.request(`/v1/explainability/predictions/${predictionId}/explanation`);
+  }
+
+  // Observations methods
+  async createObservation(observation: any): Promise<ApiResponse<any>> {
+    return this.request('/v1/observations', {
+      method: 'POST',
+      body: JSON.stringify(observation),
+    });
+  }
+
+  async getPatientObservations(patientUuid: string): Promise<ApiResponse<any>> {
+    return this.request(`/v1/observations/patient/${patientUuid}`);
+  }
+
+  // Visits methods
+  async createVisit(visit: any): Promise<ApiResponse<any>> {
+    return this.request('/v1/visits', {
+      method: 'POST',
+      body: JSON.stringify(visit),
+    });
+  }
+
+  async getPatientVisits(patientUuid: string): Promise<ApiResponse<any>> {
+    return this.request(`/v1/visits/patient/${patientUuid}`);
+  }
+
+  // Ensemble methods
+  async createEnsemble(ensemble: any): Promise<ApiResponse<any>> {
+    return this.request('/v1/ensembles', {
+      method: 'POST',
+      body: JSON.stringify(ensemble),
+    });
+  }
+
+  async listEnsembles(): Promise<ApiResponse<any>> {
+    return this.request('/v1/ensembles');
+  }
+
+  async makeEnsemblePrediction(ensembleId: string, data: any): Promise<ApiResponse<any>> {
+    return this.request(`/v1/ensembles/${ensembleId}/predict`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 }
 

@@ -457,7 +457,7 @@ class User(Base):
     """User authentication table"""
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)  # Changed from BigInteger to Integer for SQLite compatibility
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     email = Column(String, unique=True, nullable=False, index=True)
     username = Column(String, unique=True, nullable=False, index=True)
     hashed_password = Column(String, nullable=False)
@@ -493,7 +493,7 @@ class Role(Base):
     """User roles table"""
     __tablename__ = "roles"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)  # Changed from BigInteger to Integer for SQLite compatibility
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     name = Column(String, unique=True, nullable=False, index=True)
     description = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

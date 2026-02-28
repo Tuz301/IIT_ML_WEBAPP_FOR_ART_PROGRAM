@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     # Add production frontend URL via environment variable
     frontend_url: str = Field(default="http://localhost:3000")
     
-    security_enabled: bool = False  # Disabled due to ASGI middleware signature issues
+    security_enabled: bool = True  # Fixed - ASGI middleware signature issue resolved
     security_exclude_paths: list[str] = ["/health", "/docs", "/openapi.json", "/metrics"]
     
     # Rate Limiting Configuration
@@ -108,6 +108,27 @@ class Settings(BaseSettings):
     cookie_secure: bool = False  # Use secure cookies only in production (HTTPS)
     cookie_samesite: str = "lax"  # Use lax for CSRF protection
     
+    # HTTPS Configuration
+    force_https: bool = False  # Enable HTTPS redirect (set to True in production)
+    https_port: int = 443  # HTTPS port
+    https_strict: bool = False  # If True, reject HTTP with 400 instead of redirect
+    ssl_cert_path: str | None = None  # Path to SSL certificate
+    ssl_key_path: str | None = None  # Path to SSL private key
+    https_exclude_paths: list[str] = ["/health", "/metrics"]  # Paths excluded from HTTPS check
+    
+    # Idempotency Configuration
+    idempotency_enabled: bool = True  # Enable idempotency key middleware
+    idempotency_ttl: int = 172800  # 48 hours in seconds
+    idempotency_header: str = "Idempotency-Key"  # Header name for idempotency key
+    
+    # OpenTelemetry Configuration
+    telemetry_enabled: bool = True  # Enable distributed tracing
+    jaeger_endpoint: str | None = None  # Jaeger collector endpoint (e.g., http://localhost:4318)
+    jaeger_agent_host: str | None = None  # Jaeger agent host (e.g., localhost)
+    jaeger_agent_port: int | None = None  # Jaeger agent port (e.g., 6831)
+    telemetry_console_export: bool = False  # Enable console export for debugging
+    telemetry_sample_rate: float = 1.0  # Sampling rate (0.0 to 1.0)
+    
     # Session Configuration
     session_timeout_minutes: int = 30
     
@@ -115,6 +136,27 @@ class Settings(BaseSettings):
     iit_grace_period: int = 28
     prediction_window: int = 90
     default_threshold: float = 0.5
+    
+    # Retry Configuration
+    retry_max_attempts: int = 3
+    retry_wait_min: float = 1.0  # seconds
+    retry_wait_max: float = 10.0  # seconds
+    
+    # Queue Configuration (for RQ)
+    redis_queue_enabled: bool = True
+    queue_name: str = "ihvn_ml_tasks"
+    default_job_timeout: int = 600  # 10 minutes
+    
+    # Alerting Configuration
+    pagerduty_routing_key: str | None = None
+    pagerduty_api_url: str = "https://events.pagerduty.com/v2/enqueue"
+    slack_webhook_url: str | None = None
+    slack_default_channel: str = "#alerts"
+    alerting_enabled: bool = True
+    alert_rate_limit_critical: int = 0  # No rate limiting
+    alert_rate_limit_error: int = 300  # 5 minutes
+    alert_rate_limit_warning: int = 900  # 15 minutes
+    alert_rate_limit_info: int = 3600  # 1 hour
     
     class Config:
         env_file = ".env"
@@ -127,3 +169,6 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance"""
     return Settings()
+
+# Create a singleton instance for direct import
+settings = get_settings()

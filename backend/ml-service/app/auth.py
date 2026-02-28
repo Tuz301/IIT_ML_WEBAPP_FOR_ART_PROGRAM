@@ -2,7 +2,7 @@
 Authentication utilities for IIT ML Service
 Enhanced with httpOnly cookie support for improved security
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from jose import JWTError, jwt
 import bcrypt
@@ -114,12 +114,12 @@ def set_auth_cookies(
     access_max_age = settings.access_token_expire_minutes * 60
     refresh_max_age = settings.refresh_token_expire_days * 24 * 60 * 60
     
-    # Set access token cookie
+    # Set access token cookie (use timezone-aware datetime for Python 3.12+ compatibility)
     response.set_cookie(
         key=ACCESS_COOKIE_NAME,
         value=access_token,
         max_age=access_max_age,
-        expires=datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes),
+        expires=datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes),
         path="/",
         domain=settings.cookie_domain,
         secure=settings.cookie_secure,
@@ -127,12 +127,12 @@ def set_auth_cookies(
         samesite=settings.cookie_samesite,
     )
     
-    # Set refresh token cookie
+    # Set refresh token cookie (use timezone-aware datetime for Python 3.12+ compatibility)
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
         max_age=refresh_max_age,
-        expires=datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days),
+        expires=datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days),
         path="/",
         domain=settings.cookie_domain,
         secure=settings.cookie_secure,

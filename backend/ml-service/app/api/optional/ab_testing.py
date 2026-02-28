@@ -7,10 +7,10 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 import logging
 
-from ..core.db import get_db
-from ..ab_testing import get_ab_testing_engine, ABTestConfiguration, VariantConfiguration
-from ..models import ABTest, ABTestVariant, ABTestResult
-from ..auth import get_current_user
+from ...core.db import get_db
+from ...optional.ab_testing import get_ab_testing_engine, ABTestConfiguration, VariantConfiguration
+from ...models import ABTest, ABTestVariant, ABTestResult
+from ...auth import get_current_user
 
 logger = logging.getLogger(__name__)
 

@@ -21,7 +21,7 @@ async def get_cache_stats(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -52,7 +52,7 @@ async def invalidate_all_cache(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -79,7 +79,7 @@ async def invalidate_patient_cache(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -105,7 +105,7 @@ async def invalidate_endpoint_cache(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -129,7 +129,7 @@ async def invalidate_model_cache(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -189,7 +189,7 @@ async def warmup_cache(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -210,7 +210,7 @@ async def get_cache_config(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:

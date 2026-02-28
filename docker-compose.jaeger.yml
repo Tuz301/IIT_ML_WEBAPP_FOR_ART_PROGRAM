@@ -1,0 +1,100 @@
+# Docker Compose configuration with Jaeger for distributed tracing
+# This configuration adds Jaeger for visualizing OpenTelemetry traces
+
+version: '3.8'
+
+services:
+  # Jaeger Collector - receives traces from applications
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "5775:5775" # Accept jaeger.thrift over compact thrift protocol
+      - "6831:6831" # Accept jaeger.thrift over http
+      - "6832:6832" # Accept jaeger.thrift over http
+      - "5778:5778" # Accept Zipkin span reports
+      - "16686:16686" # Jaeger UI
+      - "14268:14268" # Jaeger UI
+      - "14250:14250" # gRPC
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # ML Service (backend)
+  ml-service:
+    build:
+      context: ./backend/ml-service
+      dockerfile: Dockerfile
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://ml_service:${POSTGRES_PASSWORD}@postgres:5432/iit_ml_service
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Telemetry
+      - TELEMETRY_ENABLED=true
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - TELEMETRY_SAMPLE_RATE=1.0
+      # Other settings...
+    depends_on:
+      - postgres
+      - redis
+      - jaeger
+    networks:
+      - app-network
+    restart: unless-stopped
+    expose:
+      - "8000"
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: iit_ml_service
+      POSTGRES_USER: ml_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Redis for caching and queues
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # RQ Worker for background jobs
+  worker:
+    build:
+      context: ./backend/ml-service
+      dockerfile: Dockerfile
+    command: python run_worker.py
+    environment:
+      - DATABASE_URL=postgresql://ml_service:${POSTGRES_PASSWORD}@postgres:5432/iit_ml_service
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - TELEMETRY_ENABLED=true
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+    depends_on:
+      - postgres
+      - redis
+      - jaeger
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

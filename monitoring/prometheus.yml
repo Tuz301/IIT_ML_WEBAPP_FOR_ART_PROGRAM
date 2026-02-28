@@ -1,0 +1,86 @@
+# =============================================================================
+# Prometheus Configuration for IIT ML Service
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    service: 'iit-ml-service'
+    environment: 'production'
+
+# Alerting configuration
+rule_files:
+  - 'prometheus-alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # =============================================================================
+  # IIT ML Service Metrics
+  # =============================================================================
+  - job_name: 'iit-ml-service'
+    static_configs:
+      - targets: ['backend:8000']
+        labels:
+          service: 'iit-ml-service'
+          component: 'api'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # =============================================================================
+  # RQ Worker Metrics
+  # =============================================================================
+  - job_name: 'rq-worker'
+    static_configs:
+      - targets: ['worker:8000']
+        labels:
+          service: 'iit-ml-service'
+          component: 'worker'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # =============================================================================
+  # PostgreSQL Metrics (via postgres_exporter)
+  # =============================================================================
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgresql'
+          component: 'database'
+
+  # =============================================================================
+  # Redis Metrics (via redis_exporter)
+  # =============================================================================
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          component: 'cache'
+
+  # =============================================================================
+  # Node Exporter (System Metrics)
+  # =============================================================================
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'system'
+          component: 'infrastructure'
+
+  # =============================================================================
+  # Prometheus self-monitoring
+  # =============================================================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+# =============================================================================
+# Alerting configuration
+# =============================================================================
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093

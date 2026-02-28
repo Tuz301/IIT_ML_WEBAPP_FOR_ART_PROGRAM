@@ -370,6 +370,145 @@ ml-service/
 6. Push to branch (`git push origin feature/amazing-feature`)
 7. Create Pull Request
 
+## New Production Features
+
+### Feature Flags System
+
+The service now includes a database-backed feature flag system for gradual rollouts and A/B testing.
+
+**Usage Examples:**
+
+```python
+# Using decorators
+from app.features import feature_flag
+
+@feature_flag("new_prediction_model")
+def predict_with_new_model(data):
+    return model.predict(data)
+
+# Checking flags in code
+from app.features import is_enabled
+
+if is_enabled("experimental_analytics", user_id=current_user.id):
+    run_experimental_analytics()
+```
+
+**API Endpoints:**
+
+- **GET** `/v1/feature-flags` - List all feature flags
+- **GET** `/v1/feature-flags/{flag_name}` - Get flag configuration
+- **POST** `/v1/feature-flags` - Create new flag (admin only)
+- **PUT** `/v1/feature-flags/{flag_name}` - Update flag (admin only)
+- **DELETE** `/v1/feature-flags/{flag_name}` - Delete flag (admin only)
+- **GET** `/v1/feature-flags/{flag_name}/check` - Check if flag is enabled
+
+### Retry Mechanism
+
+Automatic retry with exponential backoff for database, API, and Redis operations.
+
+**Usage Examples:**
+
+```python
+from app.utils.retry import database_retry, api_retry, redis_retry
+
+@database_retry(max_attempts=3)
+def get_user(db: Session, user_id: int):
+    return db.query(User).filter(User.id == user_id).first()
+
+@api_retry()
+def fetch_external_data(url: str):
+    response = requests.get(url, timeout=30)
+    return response.json()
+
+@redis_retry()
+def get_from_cache(key: str):
+    return redis_client.get(key)
+```
+
+**Configuration:**
+
+```python
+# In config.py or environment variables
+retry_max_attempts: int = 3
+retry_wait_min: float = 1.0  # seconds
+retry_wait_max: float = 10.0  # seconds
+```
+
+### Queue System (RQ)
+
+Background job processing for ETL, batch predictions, and report generation.
+
+**Starting a Worker:**
+
+```bash
+# Run worker with default settings
+python run_worker.py
+
+# Run with scheduler
+python run_worker.py --with-scheduler
+
+# Run in burst mode (exit when no jobs)
+python run_worker.py --burst
+```
+
+**API Endpoints:**
+
+- **GET** `/v1/queue/stats` - Get queue statistics
+- **GET** `/v1/queue/jobs/{job_id}` - Get job status
+- **DELETE** `/v1/queue/jobs/{job_id}` - Cancel job
+- **POST** `/v1/queue/jobs/etl` - Enqueue ETL job
+- **POST** `/v1/queue/jobs/batch-prediction` - Enqueue batch prediction
+- **POST** `/v1/queue/jobs/report` - Enqueue report generation
+- **POST** `/v1/queue/jobs/cleanup` - Enqueue cleanup job
+- **GET** `/v1/queue/workers` - Get all workers
+- **GET** `/v1/queue/scheduled` - Get scheduled jobs
+- **POST** `/v1/queue/schedule/cleanup` - Schedule daily cleanup
+
+**Example: Enqueue Batch Prediction**
+
+```bash
+curl -X POST "http://localhost:8000/v1/queue/jobs/batch-prediction" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "patient_uuids": ["uuid1", "uuid2", "uuid3"],
+    "model_version": "v2.0"
+  }'
+```
+
+**Configuration:**
+
+```python
+# In config.py or environment variables
+redis_queue_enabled: bool = True
+queue_name: str = "ihvn_ml_tasks"
+default_job_timeout: int = 600  # 10 minutes
+```
+
+## Database Migration
+
+After deployment, run the Alembic migration to create the feature_flags table:
+
+```bash
+# Run migration
+alembic upgrade head
+
+# Or with Docker
+docker-compose exec ml_api alembic upgrade head
+```
+
+## Testing New Features
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific test suites
+pytest tests/test_feature_flags.py -v
+pytest tests/test_retry.py -v
+pytest tests/test_queue.py -v
+```
+
 ## License
 
 [Add your license here]
@@ -385,3 +524,5 @@ For issues and questions:
 - IHVN (Institute of Human Virology Nigeria)
 - LightGBM team for the ML framework
 - FastAPI for the excellent web framework
+- RQ (Redis Queue) for background job processing
+- Tenacity for retry mechanisms

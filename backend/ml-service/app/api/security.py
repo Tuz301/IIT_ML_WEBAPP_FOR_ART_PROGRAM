@@ -107,7 +107,7 @@ async def update_security_config(
     Update security configuration (admin only)
     """
     try:
-        if not current_user.is_admin:
+        if not current_user.is_superuser:
             raise HTTPException(status_code=403, detail="Admin privileges required")
         
         # In production, this would update configuration in database or settings

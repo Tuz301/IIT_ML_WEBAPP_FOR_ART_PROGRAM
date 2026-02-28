@@ -125,8 +125,6 @@ async def custom_exception_handler(request: Request, exc: Exception) -> JSONResp
     elif isinstance(exc, SQLAlchemyError):
         # General database errors
         # Log the actual error for debugging
-        import logging
-        logger = logging.getLogger(__name__)
         print(f"[DEBUG] Database error: {str(exc)}")  # Add print for visibility
         logger.error(f"Database error: {str(exc)}", exc_info=True)
         

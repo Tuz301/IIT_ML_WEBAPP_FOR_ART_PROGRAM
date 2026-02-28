@@ -1,16 +1,16 @@
 /**
  * Enhanced Error Boundary Component
- * 
+ *
  * Provides comprehensive error handling with:
- * - Error logging to Sentry
+ * - Error logging to Sentry (with initialization check)
  * - User-friendly error display
  * - Automatic retry mechanisms
  * - Development mode error details
  * - Graceful fallback UI
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { captureException, addBreadcrumb } from '@/lib/sentry';
+import React, { Component, ErrorInfo, ReactNode, useState, useCallback } from 'react';
+import { captureException, addBreadcrumb, isSentryInitialized } from '@/lib/sentry';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, RefreshCw, Bug } from 'lucide-react';
@@ -52,28 +52,34 @@ export class ErrorBoundaryEnhanced extends Component<
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+  static getDerivedStateFromError(_error: Error): Partial<ErrorBoundaryState> {
     // Update state so the next render will show the fallback UI
     return { hasError: true };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log the error to Sentry
-    captureException(error, {
-      componentStack: errorInfo.componentStack,
-      retryCount: this.state.retryCount,
-    });
-
-    // Add breadcrumb for context
-    addBreadcrumb(
-      'Error boundary caught an error',
-      'error',
-      'error',
-      {
-        error: error.message,
+    // Log the error to Sentry (only if initialized)
+    if (isSentryInitialized()) {
+      captureException(error, {
         componentStack: errorInfo.componentStack,
-      }
-    );
+        retryCount: this.state.retryCount,
+      });
+
+      // Add breadcrumb for context
+      addBreadcrumb(
+        'Error boundary caught an error',
+        'error',
+        'error',
+        {
+          error: error.message,
+          componentStack: errorInfo.componentStack,
+        }
+      );
+    } else {
+      // Fallback console logging when Sentry is not available
+      console.error('Error caught by boundary (Sentry not initialized):', error);
+      console.error('Error info:', errorInfo);
+    }
 
     // Update state with error details
     this.setState({
@@ -246,23 +252,137 @@ export function withErrorBoundary<P extends object>(
 }
 
 /**
- * Hook to programmatically trigger error boundary
- * Note: This doesn't actually trigger the error boundary,
- * but provides a consistent API for error handling
+ * Return type for useErrorBoundary hook
  */
-export function useErrorBoundary() {
-  const triggerError = (error: Error) => {
-    // This will be caught by the nearest error boundary
-    throw error;
-  };
+export interface UseErrorBoundaryReturn {
+  /**
+   * Set an error state that can be handled by the error boundary
+   *
+   * @note This does NOT throw an error. React Error Boundaries only catch
+   * errors thrown during rendering, lifecycle methods, and constructors.
+   * Errors thrown in event handlers, async functions, or timeouts will NOT
+   * be caught by Error Boundaries.
+   *
+   * To handle errors in event handlers, use this method to set the error state
+   * and conditionally render an error UI, or use `handleError` to log to Sentry.
+   *
+   * @example
+   * ```tsx
+   * const { setError } = useErrorBoundary();
+   *
+   * const handleClick = () => {
+   *   try {
+   *     riskyOperation();
+   *   } catch (err) {
+   *     setError(err as Error);
+   *   }
+   * };
+   * ```
+   */
+  setError: (error: Error) => void;
+  
+  /**
+   * Clear any currently set error
+   */
+  clearError: () => void;
+  
+  /**
+   * Log an error to Sentry without affecting the UI
+   *
+   * Use this for errors that don't need to interrupt the user flow
+   * but should still be tracked for monitoring.
+   *
+   * @example
+   * ```tsx
+   * const { handleError } = useErrorBoundary();
+   *
+   * const handleAsyncError = async () => {
+   *   try {
+   *     await asyncOperation();
+   *   } catch (err) {
+   *     handleError(err as Error);
+   *     // Show a toast notification instead
+   *     toast.error('Operation failed');
+   *   }
+   * };
+   * ```
+   */
+  handleError: (error: Error, context?: Record<string, any>) => void;
+  
+  /**
+   * The current error, if one has been set via setError
+   */
+  error: Error | null;
+}
 
-  const handleError = (error: Error) => {
-    // Log to Sentry without throwing
-    captureException(error);
-  };
-
+/**
+ * Hook to programmatically handle errors
+ *
+ * ## Important Limitations
+ *
+ * React Error Boundaries **do not catch** errors thrown in:
+ * - Event handlers (onClick, onChange, etc.)
+ * - Async functions (promises, setTimeout, etc.)
+ * - Server-side rendering
+ *
+ * This hook provides a state-based approach to handle errors in these scenarios:
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { error, setError, clearError, handleError } = useErrorBoundary();
+ *
+ *   const handleClick = () => {
+ *     try {
+ *       riskyOperation();
+ *     } catch (err) {
+ *       // Set error state to conditionally render error UI
+ *       setError(err as Error);
+ *     }
+ *   };
+ *
+ *   const handleAsyncClick = async () => {
+ *     try {
+ *       await asyncOperation();
+ *     } catch (err) {
+ *       // Log to Sentry without interrupting flow
+ *       handleError(err as Error, { action: 'asyncClick' });
+ *       toast.error('Operation failed');
+ *     }
+ *   };
+ *
+ *   if (error) {
+ *     return <ErrorFallback error={error} reset={clearError} />;
+ *   }
+ *
+ *   return <button onClick={handleClick}>Click me</button>;
+ * }
+ * ```
+ */
+export function useErrorBoundary(): UseErrorBoundaryReturn {
+  const [error, setError] = useState<Error | null>(null);
+  
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+  
+  const handleError = useCallback((error: Error, context?: Record<string, any>) => {
+    // Log to Sentry (with built-in initialization check)
+    captureException(error, {
+      source: 'useErrorBoundary',
+      ...context,
+    });
+    
+    // Also log to console for development
+    if (import.meta.env.DEV) {
+      console.error('Error logged via useErrorBoundary:', error);
+    }
+  }, []);
+  
   return {
-    triggerError,
+    error,
+    setError,
+    clearError,
     handleError,
   };
 }

@@ -470,6 +470,11 @@ def create_validation_middleware(exclude_paths: List[str] = None) -> Callable:
     """
     Create validation middleware function
 
+    NOTE: This middleware only validates headers and query parameters.
+    Request body validation is handled by Pydantic schemas in each endpoint.
+    This avoids the body consumption issue where reading the body in middleware
+    prevents the endpoint from reading it again.
+
     Args:
         exclude_paths: List of paths to exclude from validation
 
@@ -477,10 +482,31 @@ def create_validation_middleware(exclude_paths: List[str] = None) -> Callable:
         Middleware function
     """
     async def validation_middleware(request: Request, call_next):
-        middleware = ValidationMiddleware(None, exclude_paths)
+        # Skip validation for excluded paths
+        if exclude_paths and any(path in request.url.path for path in exclude_paths):
+            return await call_next(request)
 
-        # Validate request
-        errors = await middleware._validate_request(request)
+        # Only validate headers and query parameters (not body to avoid consumption)
+        errors = []
+
+        # Validate headers for security issues
+        user_agent = request.headers.get("user-agent", "")
+        if user_agent and len(user_agent) > 500:
+            errors.append({
+                "field": "headers",
+                "error": "User-Agent header too long",
+                "details": "User-Agent header exceeds maximum length"
+            })
+
+        # Validate query parameters
+        for key, value in request.query_params.items():
+            if key and value and len(str(value)) > 1000:
+                errors.append({
+                    "field": f"query.{key}",
+                    "error": "Query parameter too long",
+                    "details": f"Query parameter '{key}' exceeds maximum length"
+                })
+
         if errors:
             return JSONResponse(
                 status_code=422,

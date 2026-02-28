@@ -7,13 +7,16 @@ from .features import router as features_router
 from .predictions import router as predictions_router
 from .visits import router as visits_router
 from .observations import router as observations_router
-from .ab_testing import router as ab_testing_router
 from .explainability import router as explainability_router
-from .ensemble import router as ensemble_router
 from .hyperparameter_tuning import router as hyperparameter_tuning_router
 
 # Import modules for direct access in main.py
-from . import patients, observations, visits, predictions, auth, features, analytics, explainability, ensemble, backup, cache, security
+from . import patients, observations, visits, predictions, auth, features, analytics, explainability, backup, cache, security, feature_flags, queue
+
+# Optional routers (moved to optional/ directory)
+# Uncomment to enable:
+# from .optional.ab_testing import router as ab_testing_router
+# from .optional.ensemble import router as ensemble_router
 
 
 # Create main API router
@@ -53,21 +56,9 @@ api_router.include_router(
 )
 
 api_router.include_router(
-    ab_testing_router,
-    prefix="/ab-testing",
-    tags=["A/B Testing"]
-)
-
-api_router.include_router(
     explainability_router,
     prefix="/explainability",
     tags=["Explainability"]
-)
-
-api_router.include_router(
-    ensemble_router,
-    prefix="/ensemble",
-    tags=["Ensemble Methods"]
 )
 
 api_router.include_router(
@@ -75,6 +66,19 @@ api_router.include_router(
     prefix="/hyperparameter-tuning",
     tags=["Hyperparameter Tuning"]
 )
+
+# Optional routers - uncomment to enable:
+# api_router.include_router(
+#     ab_testing_router,
+#     prefix="/ab-testing",
+#     tags=["A/B Testing"]
+# )
+#
+# api_router.include_router(
+#     ensemble_router,
+#     prefix="/ensemble",
+#     tags=["Ensemble Methods"]
+# )
 
 # api_router.include_router(
 #     etl_router,

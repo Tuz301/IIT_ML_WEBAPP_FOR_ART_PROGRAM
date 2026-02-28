@@ -86,7 +86,7 @@ async def create_database_backup(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -195,7 +195,7 @@ async def restore_database_backup(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -288,7 +288,7 @@ async def list_database_backups(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -380,7 +380,7 @@ async def delete_database_backup(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -549,7 +549,7 @@ async def create_model_backup(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -646,7 +646,7 @@ async def list_model_backups(current_user: User = Depends(get_current_user)):
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:
@@ -749,7 +749,7 @@ async def create_full_backup(
 
     Requires admin privileges
     """
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     try:

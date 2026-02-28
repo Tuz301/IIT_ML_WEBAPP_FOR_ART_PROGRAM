@@ -4,8 +4,76 @@ Prometheus metrics and monitoring utilities
 from prometheus_client import Counter, Histogram, Gauge, Info
 import time
 from functools import wraps
-from typing import Callable
+from typing import Callable, Dict, Any
 
+
+# Circuit Breaker Metrics
+circuit_breaker_state = Gauge(
+    'iit_circuit_breaker_state',
+    'Circuit breaker state (0=closed, 1=open, 2=half_open)',
+    ['name']
+)
+
+circuit_breaker_failures_total = Counter(
+    'iit_circuit_breaker_failures_total',
+    'Total circuit breaker failures',
+    ['name']
+)
+
+circuit_breaker_successes_total = Counter(
+    'iit_circuit_breaker_successes_total',
+    'Total circuit breaker successes',
+    ['name']
+)
+
+circuit_breaker_blocked_total = Counter(
+    'iit_circuit_breaker_blocked_total',
+    'Total requests blocked by open circuit',
+    ['name']
+)
+
+circuit_breaker_failure_rate = Gauge(
+    'iit_circuit_breaker_failure_rate',
+    'Circuit breaker failure rate percentage',
+    ['name']
+)
+
+circuit_breaker_recovery_time = Gauge(
+    'iit_circuit_breaker_recovery_time_seconds',
+    'Time since circuit opened',
+    ['name']
+)
+
+# Dead Letter Queue Metrics
+dlq_jobs_total = Counter(
+    'iit_dlq_jobs_total',
+    'Total jobs moved to dead letter queue',
+    ['job_type', 'failure_reason']
+)
+
+dlq_retries_total = Counter(
+    'iit_dlq_retries_total',
+    'Total retry attempts from DLQ',
+    ['job_type']
+)
+
+dlq_retry_delay_seconds = Histogram(
+    'iit_dlq_retry_delay_seconds',
+    'Delay between retry attempts',
+    ['job_type'],
+    buckets=[60, 300, 600, 1800, 3600]
+)
+
+dlq_resolved_total = Counter(
+    'iit_dlq_resolved_total',
+    'Total DLQ jobs resolved',
+    ['resolution_type']
+)
+
+dlq_queue_size = Gauge(
+    'iit_dlq_queue_size',
+    'Current number of jobs in dead letter queue'
+)
 
 # Prediction Metrics
 prediction_requests_total = Counter(
@@ -568,3 +636,82 @@ class MetricsManager:
     def record_hyperparameter_tuning_job(status: str):
         """Record hyperparameter tuning job"""
         hyperparameter_tuning_jobs.labels(status=status).inc()
+    
+    # Circuit Breaker Metrics Methods
+    
+    @staticmethod
+    def register_circuit_breaker(name: str, failure_threshold: int, timeout: float):
+        """Register a new circuit breaker (called on initialization)"""
+        # Initialize metrics with default values
+        circuit_breaker_state.labels(name=name).set(0)  # Start closed
+        circuit_breaker_failure_rate.labels(name=name).set(0)
+    
+    @staticmethod
+    def update_circuit_breaker_state(name: str, state: str):
+        """Update circuit breaker state"""
+        state_map = {"closed": 0, "open": 1, "half_open": 2}
+        circuit_breaker_state.labels(name=name).set(state_map.get(state, 0))
+    
+    @staticmethod
+    def record_circuit_breaker_success(name: str):
+        """Record successful call through circuit breaker"""
+        circuit_breaker_successes_total.labels(name=name).inc()
+    
+    @staticmethod
+    def record_circuit_breaker_failure(name: str, error_type: str):
+        """Record failed call through circuit breaker"""
+        circuit_breaker_failures_total.labels(name=name).inc()
+    
+    @staticmethod
+    def record_circuit_breaker_blocked(name: str):
+        """Record request blocked by open circuit"""
+        circuit_breaker_blocked_total.labels(name=name).inc()
+    
+    @staticmethod
+    def update_circuit_breaker_failure_rate(name: str, rate: float):
+        """Update circuit breaker failure rate"""
+        circuit_breaker_failure_rate.labels(name=name).set(rate)
+    
+    @staticmethod
+    def update_circuit_breaker_recovery_time(name: str, time_since_open: float):
+        """Update time since circuit opened"""
+        circuit_breaker_recovery_time.labels(name=name).set(time_since_open)
+    
+    @staticmethod
+    def get_circuit_breaker_metrics() -> Dict[str, Any]:
+        """Get all circuit breaker metrics for monitoring endpoint"""
+        return {
+            "circuit_breakers": {
+                "state": circuit_breaker_state,
+                "failures": circuit_breaker_failures_total,
+                "successes": circuit_breaker_successes_total,
+                "blocked": circuit_breaker_blocked_total,
+                "failure_rate": circuit_breaker_failure_rate,
+                "recovery_time": circuit_breaker_recovery_time
+            }
+        }
+    
+    # Dead Letter Queue Metrics Methods
+    
+    @staticmethod
+    def record_dlq_job_added(job_type: str, failure_reason: str):
+        """Record job added to dead letter queue"""
+        dlq_jobs_total.labels(job_type=job_type, failure_reason=failure_reason).inc()
+        dlq_queue_size.inc()
+    
+    @staticmethod
+    def record_dlq_retry_scheduled(job_type: str, retry_count: int, delay: float):
+        """Record retry scheduled for DLQ job"""
+        dlq_retries_total.labels(job_type=job_type).inc()
+        dlq_retry_delay_seconds.labels(job_type=job_type).observe(delay)
+    
+    @staticmethod
+    def record_dlq_job_resolved(resolution_type: str):
+        """Record DLQ job resolved"""
+        dlq_resolved_total.labels(resolution_type=resolution_type).inc()
+        dlq_queue_size.dec()
+    
+    @staticmethod
+    def update_dlq_queue_size(size: int):
+        """Update DLQ queue size"""
+        dlq_queue_size.set(size)

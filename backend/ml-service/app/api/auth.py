@@ -198,7 +198,7 @@ async def test_login_endpoint(
         return {"error": str(e), "type": type(e).__name__}
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login")
 async def login_for_access_token(
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -217,74 +217,101 @@ async def login_for_access_token(
     import logging
     logger = logging.getLogger(__name__)
     
-    logger.info(f"Login attempt for username: {form_data.username}")
-    
     try:
-        logger.info(f"Step 1: Calling authenticate_user")
-        user = authenticate_user(db, form_data.username, form_data.password)
-        logger.info(f"Step 2: authenticate_user returned: {user}")
-        if not user:
-            logger.warning(f"Authentication failed for username: {form_data.username}")
+        logger.info(f"Login attempt for username: {form_data.username}")
+        
+        user = None
+        try:
+            logger.info(f"Step 1: Calling authenticate_user")
+            user = authenticate_user(db, form_data.username, form_data.password)
+            logger.info(f"Step 2: authenticate_user returned: {user}")
+            if not user:
+                logger.warning(f"Authentication failed for username: {form_data.username}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Incorrect username or password",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error during authentication: {e}", exc_info=True)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Authentication error: {str(e)}"
             )
-    except Exception as e:
-        logger.error(f"Error during authentication: {e}", exc_info=True)
-        raise
 
-    # Check if user is active
-    logger.info(f"Step 3: Checking if user is active")
-    if not user.is_active:
+        # Check if user is active
+        logger.info(f"Step 3: Checking if user is active")
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is disabled"
+            )
+        logger.info(f"Step 4: User is active")
+
+        # Get user roles and explicitly materialize them to prevent lazy loading issues
+        logger.info(f"Step 5: Getting user roles")
+        try:
+            # Force materialization of roles relationship to avoid lazy loading during serialization
+            roles_list = list(user.roles)
+            roles = [role.name for role in roles_list]
+            logger.info(f"Step 6: User roles: {roles}")
+        except Exception as e:
+            logger.error(f"Error getting user roles: {e}", exc_info=True)
+            raise
+
+        # Create tokens
+        logger.info(f"Step 7: Creating tokens")
+        try:
+            access_token_data = {
+                "sub": user.username,
+                "user_id": user.id,
+                "roles": roles
+            }
+
+            refresh_token_data = {
+                "sub": user.username,
+                "user_id": user.id
+            }
+
+            logger.info(f"Step 8: Calling create_access_token")
+            access_token = create_access_token(access_token_data)
+            logger.info(f"Step 9: Calling create_refresh_token")
+            refresh_token = create_refresh_token(refresh_token_data)
+            logger.info(f"Step 10: Tokens created successfully")
+        except Exception as e:
+            logger.error(f"Error creating tokens: {e}", exc_info=True)
+            raise
+
+        # Set httpOnly cookies for improved security
+        logger.info(f"Step 11: Setting auth cookies")
+        set_auth_cookies(response, access_token, refresh_token)
+        logger.info(f"Step 12: Auth cookies set successfully")
+
+        # Prepare response
+        logger.info(f"Step 13: Preparing TokenResponse")
+        try:
+            token_response = TokenResponse(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                token_type="bearer",
+                expires_in=settings.access_token_expire_minutes * 60,
+                user=user
+            )
+            logger.info(f"Step 14: TokenResponse created successfully")
+            return token_response
+        except Exception as e:
+            logger.error(f"Error creating TokenResponse: {e}", exc_info=True)
+            raise
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in login endpoint: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is disabled"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected error: {str(e)}"
         )
-    logger.info(f"Step 4: User is active")
-
-    # Get user roles
-    logger.info(f"Step 5: Getting user roles")
-    try:
-        roles = [role.name for role in user.roles]
-        logger.info(f"Step 6: User roles: {roles}")
-    except Exception as e:
-        logger.error(f"Error getting user roles: {e}", exc_info=True)
-        raise
-
-    # Create tokens
-    logger.info(f"Step 7: Creating tokens")
-    try:
-        access_token_data = {
-            "sub": user.username,
-            "user_id": user.id,
-            "roles": roles
-        }
-
-        refresh_token_data = {
-            "sub": user.username,
-            "user_id": user.id
-        }
-
-        logger.info(f"Step 8: Calling create_access_token")
-        access_token = create_access_token(access_token_data)
-        logger.info(f"Step 9: Calling create_refresh_token")
-        refresh_token = create_refresh_token(refresh_token_data)
-        logger.info(f"Step 10: Tokens created successfully")
-    except Exception as e:
-        logger.error(f"Error creating tokens: {e}", exc_info=True)
-        raise
-
-    # Set httpOnly cookies for improved security
-    set_auth_cookies(response, access_token, refresh_token)
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=settings.access_token_expire_minutes * 60,
-        user=user
-    )
 
 
 @router.post("/refresh", response_model=TokenResponse)

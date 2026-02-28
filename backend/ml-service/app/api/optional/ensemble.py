@@ -8,10 +8,10 @@ from pydantic import BaseModel
 from enum import Enum
 import logging
 
-from ..core.db import get_db
-from ..ensemble_methods import get_ensemble_engine, EnsembleType, VotingStrategy, EnsembleConfigurationData
-from ..models import EnsembleConfiguration, EnsemblePrediction
-from ..auth import get_current_user
+from ...core.db import get_db
+from ...optional.ensemble_methods import get_ensemble_engine, EnsembleType, VotingStrategy, EnsembleConfigurationData
+from ...models import EnsembleConfiguration, EnsemblePrediction
+from ...auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
