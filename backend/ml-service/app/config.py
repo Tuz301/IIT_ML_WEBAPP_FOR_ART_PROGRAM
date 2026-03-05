@@ -2,9 +2,10 @@
 Configuration management for IIT Prediction ML Service
 """
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
 from functools import lru_cache
 import secrets
+import json
 
 
 class Settings(BaseSettings):
@@ -84,6 +85,21 @@ class Settings(BaseSettings):
             "http://127.0.0.1:8080",
         ]
     )
+    
+    @field_validator('cors_origins', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS_ORIGINS from environment variable (JSON string or comma-separated)"""
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            # Try to parse as JSON array first
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                # Fall back to comma-separated values
+                return [origin.strip() for origin in v.split(',')]
+        return v
     # Add production frontend URL via environment variable
     frontend_url: str = Field(default="http://localhost:3000")
     
