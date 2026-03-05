@@ -37,21 +37,21 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd ml-service
+        cd backend/ml-service
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest pytest-asyncio httpx coverage
 
     - name: Run tests
       run: |
-        cd ml-service
+        cd backend/ml-service
         coverage run -m pytest tests/ -v --tb=short
         coverage report --fail-under=80
 
     - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
-        file: ./ml-service/coverage.xml
+        file: ./backend/ml-service/coverage.xml
         flags: unittests
         name: codecov-umbrella
 
@@ -72,14 +72,14 @@ jobs:
     - name: Build and push ML service
       uses: docker/build-push-action@v5
       with:
-        context: ./ml-service
+        context: ./backend/ml-service
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/iit-ml-service:latest
 
     - name: Build and push ETL service
       uses: docker/build-push-action@v5
       with:
-        context: ./ml-service/etl
+        context: ./backend/ml-service/etl
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/iit-etl-service:latest
 
@@ -87,7 +87,6 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    environment: staging
 
     steps:
     - name: Deploy to staging
@@ -95,12 +94,12 @@ jobs:
         echo "Deploying to staging environment"
         # Add deployment commands here
         # Example: kubectl apply -f k8s/staging/
+        # Note: To use environment protection rules, configure 'staging' environment in GitHub repository settings
 
   deploy-production:
     needs: deploy-staging
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
 
     steps:
     - name: Deploy to production
@@ -108,3 +107,4 @@ jobs:
         echo "Deploying to production environment"
         # Add production deployment commands here
         # Example: kubectl apply -f k8s/production/
+        # Note: To use environment protection rules, configure 'production' environment in GitHub repository settings
