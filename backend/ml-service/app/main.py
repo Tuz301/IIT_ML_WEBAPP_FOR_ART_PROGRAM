@@ -13,6 +13,12 @@ from .middleware.https import HTTPSRedirectMiddleware
 from .middleware.idempotency import IdempotencyMiddleware
 from .health import router as health_router
 from .config import get_settings
+# Optional Sentry integration (only if sentry_sdk is installed)
+try:
+    from .sentry_integration import init_sentry, SentryConfig, create_sentry_filter
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
 
 settings = get_settings()
 
@@ -20,6 +26,18 @@ app = FastAPI(title="IIT ML Service", version="1.0.0", redirect_slashes=False)
 
 # Setup custom error handlers
 setup_error_handlers(app)
+
+# Initialize Sentry for error tracking (if configured and available)
+if SENTRY_AVAILABLE and hasattr(settings, 'sentry_dsn') and settings.sentry_dsn:
+    sentry_config = SentryConfig(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment if hasattr(settings, 'environment') else "production",
+        release=settings.api_version if hasattr(settings, 'api_version') else None,
+        traces_sample_rate=0.1,  # 10% of transactions
+        profiles_sample_rate=0.1,  # 10% of transactions
+        before_send=create_sentry_filter()  # Filter out 404s and validation errors
+    )
+    init_sentry(sentry_config)
 
 # CORS middleware MUST be added first to ensure headers are set correctly
 app.add_middleware(

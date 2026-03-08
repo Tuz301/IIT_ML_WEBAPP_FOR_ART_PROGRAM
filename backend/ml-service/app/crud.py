@@ -17,9 +17,12 @@ from .schema import (
 logger = logging.getLogger(__name__)
 
 
-def get_patient(db: Session, patient_uuid: str) -> Optional[Patient]:
+def get_patient(db: Session, patient_uuid: str, include_deleted: bool = False) -> Optional[Patient]:
     """Get a patient by UUID"""
-    return db.query(Patient).filter(Patient.patient_uuid == patient_uuid).first()
+    query = db.query(Patient).filter(Patient.patient_uuid == patient_uuid)
+    if not include_deleted:
+        query = query.filter(Patient.deleted_at.is_(None))
+    return query.first()
 
 
 def get_patients(
@@ -28,10 +31,15 @@ def get_patients(
     limit: int = 100,
     search_query: Optional[str] = None,
     filters: Optional[PatientFilter] = None,
-    search_criteria: Optional[PatientSearch] = None
+    search_criteria: Optional[PatientSearch] = None,
+    include_deleted: bool = False
 ) -> List[Patient]:
     """Get patients with optional filtering and search"""
     query = db.query(Patient)
+    
+    # Filter out soft deleted records by default
+    if not include_deleted:
+        query = query.filter(Patient.deleted_at.is_(None))
 
     # Apply search query
     if search_query:
@@ -217,14 +225,58 @@ def update_patient(
     return patient
 
 
-def delete_patient(db: Session, patient_uuid: str, deleted_by: Optional[int] = None) -> bool:
-    """Delete a patient"""
+def delete_patient(db: Session, patient_uuid: str, deleted_by: Optional[int] = None, hard_delete: bool = False) -> bool:
+    """
+    Delete a patient (soft delete by default)
+    
+    Args:
+        db: Database session
+        patient_uuid: Patient UUID
+        deleted_by: User ID who is performing the deletion
+        hard_delete: If True, permanently delete the record (use with caution)
+    
+    Returns:
+        True if successful, False otherwise
+    """
     patient = db.query(Patient).filter(Patient.patient_uuid == patient_uuid).first()
     if not patient:
         return False
 
-    db.delete(patient)
+    if hard_delete:
+        # Permanent deletion - use with caution
+        db.delete(patient)
+        logger.warning(f"Patient {patient_uuid} permanently deleted by user {deleted_by}")
+    else:
+        # Soft delete - mark as deleted
+        patient.deleted_at = datetime.utcnow()
+        logger.info(f"Patient {patient_uuid} soft deleted by user {deleted_by}")
+    
     db.commit()
+    return True
+
+
+def restore_patient(db: Session, patient_uuid: str) -> bool:
+    """
+    Restore a soft deleted patient
+    
+    Args:
+        db: Database session
+        patient_uuid: Patient UUID to restore
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    patient = db.query(Patient).filter(Patient.patient_uuid == patient_uuid).first()
+    if not patient:
+        return False
+    
+    if patient.deleted_at is None:
+        # Patient is not deleted
+        return False
+    
+    patient.deleted_at = None
+    db.commit()
+    logger.info(f"Patient {patient_uuid} restored")
     return True
 
 

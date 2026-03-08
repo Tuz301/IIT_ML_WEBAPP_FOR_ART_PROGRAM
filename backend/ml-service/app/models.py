@@ -45,19 +45,21 @@ class Patient(Base):
     phone_present = Column(Boolean, Computed("(phone_number IS NOT NULL)", persisted=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)  # Soft delete support
 
     # Relationships
-    visits = relationship("Visit", back_populates="patient", cascade="all, delete-orphan")
-    encounters = relationship("Encounter", back_populates="patient", cascade="all, delete-orphan")
-    observations = relationship("Observation", back_populates="patient", cascade="all, delete-orphan")
-    iit_features = relationship("IITFeatures", back_populates="patient", uselist=False, cascade="all, delete-orphan")
-    iit_predictions = relationship("IITPrediction", back_populates="patient", cascade="all, delete-orphan")
-    raw_json_files = relationship("RawJSONFile", back_populates="patient", cascade="all, delete-orphan")
+    visits = relationship("Visit", back_populates="patient")
+    encounters = relationship("Encounter", back_populates="patient")
+    observations = relationship("Observation", back_populates="patient")
+    iit_features = relationship("IITFeatures", back_populates="patient", uselist=False)
+    iit_predictions = relationship("IITPrediction", back_populates="patient")
+    raw_json_files = relationship("RawJSONFile", back_populates="patient")
 
     # Indexes
     __table_args__ = (
         Index('idx_patients_pepfar', 'pepfar_id'),
         Index('idx_patients_datim', 'datim_id'),
+        Index('idx_patients_deleted_at', 'deleted_at'),
     )
 
     @validates('gender')
@@ -85,14 +87,16 @@ class Visit(Base):
     location_id = Column(String)
     voided = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)  # Soft delete support
 
     # Relationships
     patient = relationship("Patient", back_populates="visits")
-    encounters = relationship("Encounter", back_populates="visit", cascade="all, delete-orphan")
+    encounters = relationship("Encounter", back_populates="visit")
 
     # Indexes
     __table_args__ = (
         Index('idx_visits_patient_date', 'patient_uuid', 'date_started'),
+        Index('idx_visits_deleted_at', 'deleted_at'),
     )
 
     @validates('date_stopped')
@@ -288,6 +292,7 @@ class IITPrediction(Base):
     prediction_timestamp = Column(DateTime(timezone=True), server_default=func.now())
     features = Column(UniversalJSON)  # Snapshot of features used
     request_meta = Column(UniversalJSON)  # Request metadata
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)  # Soft delete support
 
     # Relationships
     patient = relationship("Patient", back_populates="iit_predictions")
@@ -295,6 +300,7 @@ class IITPrediction(Base):
     # Indexes
     __table_args__ = (
         Index('idx_preds_patient_time', 'patient_uuid', 'prediction_timestamp'),
+        Index('idx_preds_deleted_at', 'deleted_at'),
     )
 
     @validates('prediction_score')

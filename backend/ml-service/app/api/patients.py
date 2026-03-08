@@ -11,7 +11,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from ..dependencies import get_db, get_current_user
+from ..dependencies import get_db, get_current_user, get_current_superuser
 from ..models import User
 from ..schema import (
     PatientCreate, PatientUpdate, PatientResponse, PatientListResponse,
@@ -21,7 +21,7 @@ from ..schema import (
 )
 from ..crud import (
     get_patient, get_patients, get_patient_count, create_patient,
-    update_patient, delete_patient, validate_patient_data,
+    update_patient, delete_patient, restore_patient, validate_patient_data,
     import_patients, get_patient_stats
 )
 
@@ -445,6 +445,107 @@ async def delete_existing_patient(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete patient"
+        )
+
+
+@router.post("/{patient_uuid}/restore", response_model=PatientResponse)
+async def restore_deleted_patient(
+    patient_uuid: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superuser)  # Only superusers can restore
+):
+    """
+    Restore a soft deleted patient
+    
+    This endpoint allows administrators to restore patients that were soft deleted.
+    Only superusers can perform this action.
+    """
+    try:
+        # Check permissions (superuser only)
+        
+        restored = restore_patient(
+            db=db,
+            patient_uuid=patient_uuid
+        )
+        
+        if not restored:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Patient with UUID {patient_uuid} not found or not deleted"
+            )
+        
+        # Get the restored patient
+        patient = get_patient(db, patient_uuid, include_deleted=False)
+        
+        logger.info(f"Restored patient {patient_uuid}", extra={
+            "user_id": current_user.id,
+            "username": current_user.username,
+            "patient_uuid": patient_uuid
+        })
+        
+        return PatientResponse.from_orm(patient)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to restore patient {patient_uuid}: {str(e)}", extra={
+            "user_id": current_user.id,
+            "error": str(e)
+        }, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to restore patient"
+        )
+
+
+@router.get("/deleted", response_model=PatientListResponse)
+async def list_deleted_patients(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superuser)  # Only superusers can view deleted records
+):
+    """
+    List soft deleted patients
+    
+    This endpoint allows administrators to view all soft deleted patients.
+    Only superusers can access this endpoint.
+    """
+    try:
+        # Get soft deleted patients only
+        patients = get_patients(
+            db=db,
+            skip=skip,
+            limit=limit,
+            include_deleted=True  # Include deleted records
+        )
+        
+        # Filter to only show deleted patients
+        deleted_patients = [p for p in patients if p.deleted_at is not None]
+        
+        # Get total count of deleted patients
+        total_deleted = len(deleted_patients)
+        
+        logger.info(f"Listed deleted patients - {total_deleted} total", extra={
+            "user_id": current_user.id,
+            "username": current_user.username
+        })
+        
+        return PatientListResponse(
+            patients=[PatientResponse.from_orm(p) for p in deleted_patients],
+            total=total_deleted,
+            skip=skip,
+            limit=limit
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to list deleted patients: {str(e)}", extra={
+            "user_id": current_user.id,
+            "error": str(e)
+        }, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list deleted patients"
         )
 
 

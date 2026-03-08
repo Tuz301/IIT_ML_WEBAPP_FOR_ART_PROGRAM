@@ -6,6 +6,7 @@ from pydantic import Field, field_validator
 from functools import lru_cache
 import secrets
 import json
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -173,6 +174,12 @@ class Settings(BaseSettings):
     alert_rate_limit_error: int = 300  # 5 minutes
     alert_rate_limit_warning: int = 900  # 15 minutes
     alert_rate_limit_info: int = 3600  # 1 hour
+    
+    # Sentry Error Tracking
+    sentry_dsn: Optional[str] = None  # Sentry DSN for error tracking
+    sentry_environment: str = "production"
+    sentry_traces_sample_rate: float = 0.1  # 10% of transactions
+    sentry_profiles_sample_rate: float = 0.1  # 10% of transactions
     
     class Config:
         env_file = ".env"
